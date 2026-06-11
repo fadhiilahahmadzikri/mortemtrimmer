@@ -1,0 +1,10 @@
+numpy
+soundfile
+torch
+torchaudio
+noisereduce
+tqdm
+matplotlib
+seaborn
+deepfilternet
+faster-whisper
