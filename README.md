@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <h1 align="center">Auto Silent Trimmer</h1>
+  <h1 align="center">Mortem Trimmer</h1>
   <p align="center">
     <strong>State-of-the-Art AI-Powered Silence Remover & Noise Reduction Pipeline</strong>
   </p>
