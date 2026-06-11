@@ -1,5 +1,9 @@
 <p align="center">
-  <h1 align="center">🔇 Auto Silent Trimmer</h1>
+  <img src="https://github.com/user-attachments/assets/1b7cb555-c8ed-4410-8aeb-15898604b8ac" alt="Mortem Banner" width="100%" />
+</p>
+
+<p align="center">
+  <h1 align="center">Auto Silent Trimmer</h1>
   <p align="center">
     <strong>State-of-the-Art AI-Powered Silence Remover & Noise Reduction Pipeline</strong>
   </p>
@@ -18,30 +22,30 @@
 
 ---
 
-## ✨ What is Auto Silent Trimmer?
+## What is Mortem?
 
-**Auto Silent Trimmer** is a production-grade Python CLI tool that automatically detects and removes silent segments from audio and video files using cutting-edge Voice Activity Detection (VAD) models, then optionally applies deep-learning-based noise reduction to produce crystal-clear output.
+**Mortem** is a production-grade Python CLI tool that automatically detects and removes silent segments from audio and video files using cutting-edge Voice Activity Detection (VAD) models, then optionally applies deep-learning-based noise reduction to produce crystal-clear output.
 
 Whether you're a **YouTuber**, **podcaster**, **video editor**, or **content creator** — this tool saves you hours of manual editing by intelligently trimming dead air and cleaning up noisy recordings with a single command.
 
 ---
 
-## 🚀 Features
+## Features
 
 | Feature | Description |
 |---|---|
-| 🧠 **3 VAD Engines** | Silero VAD (neural), Whisper Semantic VAD, Energy-based VAD |
-| 🎛️ **2 Noise Reduction Modes** | DeepFilterNet3 (SOTA deep learning) & Spectral Gating |
-| 🎬 **Video + Audio Support** | Process MP4, MKV, AVI, MOV, WAV, MP3, AAC, and more |
-| ⚡ **CUDA Acceleration** | GPU-accelerated inference for blazing-fast processing |
-| 📊 **Scientific Visualization** | Auto-generates speech segment plots (timeline chart) |
-| 📝 **Speech Manifest** | Exports timestamped transcript of all detected speech segments |
-| 🔀 **Zero AV-Drift Splicing** | Frame-accurate trim+concat via FFmpeg filter graphs |
-| 🏗️ **Strategy Pattern Architecture** | Clean, extensible OOP design — plug in your own engines |
+| **3 VAD Engines** | Silero VAD (neural), Whisper Semantic VAD, Energy-based VAD |
+| **2 Noise Reduction Modes** | DeepFilterNet3 (SOTA deep learning) & Spectral Gating |
+| **Video + Audio Support** | Process MP4, MKV, AVI, MOV, WAV, MP3, AAC, and more |
+| **CUDA Acceleration** | GPU-accelerated inference for blazing-fast processing |
+| **Scientific Visualization** | Auto-generates speech segment plots (timeline chart) |
+| **Speech Manifest** | Exports timestamped transcript of all detected speech segments |
+| **Zero AV-Drift Splicing** | Frame-accurate trim+concat via FFmpeg filter graphs |
+| **Strategy Pattern Architecture** | Clean, extensible OOP design — plug in your own engines |
 
 ---
 
-## 📋 Requirements
+## Requirements
 
 - **Python** 3.10+
 - **FFmpeg** installed and accessible (or provide the path via `--ffmpeg`)
@@ -49,7 +53,7 @@ Whether you're a **YouTuber**, **podcaster**, **video editor**, or **content cre
 
 ---
 
-## 🛠️ Installation
+## Installation
 
 ### 1. Clone the Repository
 
@@ -116,12 +120,12 @@ pip install faster-whisper
 
 ---
 
-## 🎮 Usage
+## Usage
 
 ### Basic Syntax
 
 ```bash
-python sota_cleaner.py -i <input_file> -o <output_file> [options]
+python mortem.py -i <input_file> -o <output_file> [options]
 ```
 
 ### Command-Line Arguments
@@ -138,85 +142,85 @@ python sota_cleaner.py -i <input_file> -o <output_file> [options]
 
 ---
 
-## 🧠 VAD Engines
+## VAD Engines
 
-### 🟢 Silero VAD (Default — Recommended)
+### Silero VAD (Default — Recommended)
 Neural network-based acoustic voice activity detection. Fastest and most reliable for general use.
 ```bash
-python sota_cleaner.py -i input.mp4 -o output.mp4 --vad silero
+python mortem.py -i input.mp4 -o output.mp4 --vad silero
 ```
 
-### 🟡 Whisper Semantic VAD
+### Whisper Semantic VAD
 Uses OpenAI's Whisper model to transcribe audio and extract word-level timestamps. Best for content where semantic accuracy matters (e.g., podcasts with music).
 ```bash
-python sota_cleaner.py -i input.mp4 -o output.mp4 --vad whisper
+python mortem.py -i input.mp4 -o output.mp4 --vad whisper
 ```
 
-### 🔵 Energy-Based VAD
+### Energy-Based VAD
 Lightweight, zero-dependency VAD using signal energy thresholding. Great for clean recordings with obvious silence gaps.
 ```bash
-python sota_cleaner.py -i input.wav -o output.wav --vad energy
+python mortem.py -i input.wav -o output.wav --vad energy
 ```
 
 ---
 
-## 🎛️ Noise Reduction
+## Noise Reduction
 
-### 🟣 DeepFilterNet3 (Default — SOTA)
+### DeepFilterNet3 (Default — SOTA)
 State-of-the-art deep neural network for real-time speech enhancement. Supports CUDA GPU acceleration with chunked processing for O(1) memory usage.
 ```bash
-python sota_cleaner.py -i input.mp4 -o output.mp4 -m deepfilter
+python mortem.py -i input.mp4 -o output.mp4 -m deepfilter
 ```
 
-### 🟠 Spectral Gating
+### Spectral Gating
 Classic signal processing approach using `noisereduce` library. Lightweight and CPU-friendly.
 ```bash
-python sota_cleaner.py -i input.wav -o output.wav -m spectral
+python mortem.py -i input.wav -o output.wav -m spectral
 ```
 
-### ⚪ No Noise Reduction
+### No Noise Reduction
 Skip noise reduction entirely — only perform silence trimming.
 ```bash
-python sota_cleaner.py -i input.mp4 -o output.mp4 -m none
+python mortem.py -i input.mp4 -o output.mp4 -m none
 ```
 
 ---
 
-## 💡 Examples
+## Examples
 
 ### Remove silence from a video (default settings)
 ```bash
-python sota_cleaner.py -i raw_video.mp4 -o clean_video.mp4
+python mortem.py -i raw_video.mp4 -o clean_video.mp4
 ```
 
 ### Podcast cleanup with aggressive silence removal
 ```bash
-python sota_cleaner.py -i podcast.wav -o podcast_clean.wav --min-silence 0.3 --pad 0.1
+python mortem.py -i podcast.wav -o podcast_clean.wav --min-silence 0.3 --pad 0.1
 ```
 
 ### Video with only silence trimming (no noise reduction)
 ```bash
-python sota_cleaner.py -i lecture.mp4 -o lecture_trimmed.mp4 -m none --vad silero
+python mortem.py -i lecture.mp4 -o lecture_trimmed.mp4 -m none --vad silero
 ```
 
 ### Full pipeline with Whisper VAD + DeepFilterNet3
 ```bash
-python sota_cleaner.py -i interview.mkv -o interview_clean.mkv -m deepfilter --vad whisper
+python mortem.py -i interview.mkv -o interview_clean.mkv -m deepfilter --vad whisper
 ```
 
 ### Audio-only processing with spectral gating
 ```bash
-python sota_cleaner.py -i recording.wav -o recording_clean.wav -m spectral --vad energy
+python mortem.py -i recording.wav -o recording_clean.wav -m spectral --vad energy
 ```
 
 ### Custom FFmpeg path
 ```bash
-python sota_cleaner.py -i input.mp4 -o output.mp4 -f /usr/bin/ffmpeg
+python mortem.py -i input.mp4 -o output.mp4 -f /usr/bin/ffmpeg
 ```
 
 ---
 
-## 📊 Output Files
+## Output Files
 
 After processing, the tool generates:
 
@@ -228,7 +232,7 @@ After processing, the tool generates:
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 The project follows the **Strategy Pattern** with clean interface abstractions:
 
@@ -244,7 +248,7 @@ INoiseReductionStrategy          IVoiceActivityDetector          IMediaManager
 
 ---
 
-## ⚠️ Troubleshooting
+## Troubleshooting
 
 | Issue | Solution |
 |---|---|
@@ -255,24 +259,24 @@ INoiseReductionStrategy          IVoiceActivityDetector          IMediaManager
 
 ---
 
-## 📄 License
+## License
 
 This project is open source and available under the [MIT License](LICENSE).
 
 ---
 
-## 🌟 Star This Repo!
+## Star This Repo
 
-If this tool saved you time, please ⭐ **star this repository** — it helps others discover it!
+If this tool saved you time, please **star this repository** — it helps others discover it!
 
 ---
 
 <p align="center">
-  <strong>Built with 🔥 by <a href="https://github.com/fadhiilahahmadzikri">fadhiilahahmadzikri</a></strong>
+  <strong>Built by <a href="https://github.com/fadhiilahahmadzikri">fadhiilahahmadzikri</a></strong>
 </p>
 
 <!-- SEO Tags & Keywords -->
-<!-- auto silence remover, remove silence from video, remove silence from audio, silence trimmer, 
+<!-- mortem, auto silence remover, remove silence from video, remove silence from audio, silence trimmer, 
      auto cut silence, automatic silence removal, python silence remover, ffmpeg silence detection,
      voice activity detection, VAD, silero vad, whisper vad, deepfilternet, noise reduction,
      background noise removal, audio cleaner, video cleaner, podcast editor, youtube editor,

@@ -28,6 +28,12 @@ desktop.ini
 *.manifest.txt
 *.plot.png
 
+# Release artifacts
+*.zip
+
 # Temp files
 *.tmp
 *.temp
+
+# Release notes (local only)
+RELEASE_NOTES.md
