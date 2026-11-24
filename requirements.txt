@@ -8,3 +8,4 @@ matplotlib
 seaborn
 deepfilternet
 faster-whisper
+imageio-ffmpeg

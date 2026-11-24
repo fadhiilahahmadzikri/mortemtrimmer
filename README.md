@@ -101,22 +101,13 @@ pip install deepfilternet
 pip install faster-whisper
 ```
 
-### 4. Install FFmpeg
+### 4. FFmpeg Integration
 
-- **Windows (Chocolatey):**
-  ```bash
-  choco install ffmpeg
-  ```
+FFmpeg is **automatically managed out of the box** via `imageio-ffmpeg` upon running `pip install -r requirements.txt`. No manual installation or Chocolatey setup is required!
 
-- **Linux (apt):**
-  ```bash
-  sudo apt install ffmpeg
-  ```
-
-- **macOS (Homebrew):**
-  ```bash
-  brew install ffmpeg
-  ```
+If you prefer to use your own system FFmpeg binary instead, you can:
+- Ensure `ffmpeg` is in your system `PATH`, OR
+- Pass the explicit path via `-f / --ffmpeg <path>`.
 
 ---
 
@@ -125,20 +116,33 @@ pip install faster-whisper
 ### Basic Syntax
 
 ```bash
-python mortem.py -i <input_file> -o <output_file> [options]
+python main.py -i <input_file> -o <output_file> [options]
+```
+
+or via package execution:
+```bash
+python -m autosilenttrimmer -i <input_file> -o <output_file> [options]
+```
+
+### Pre-Flight System Readiness Check
+
+Verify your hardware acceleration, FFmpeg integration, and deep learning engines:
+```bash
+python main.py --check
 ```
 
 ### Command-Line Arguments
 
 | Argument | Type | Default | Description |
 |---|---|---|---|
+| `--check` | `flag` | `False` | Run comprehensive system readiness diagnostics and exit |
 | `-i`, `--input` | `str` | **(required)** | Path to the input audio/video file |
 | `-o`, `--output` | `str` | **(required)** | Path for the output file |
 | `-m`, `--method` | `str` | `deepfilter` | Noise reduction method: `none`, `spectral`, `deepfilter` |
 | `--vad` | `str` | `silero` | VAD engine: `none`, `energy`, `whisper`, `silero` |
 | `--min-silence` | `float` | `0.5` | Minimum silence duration (seconds) to trigger a cut |
 | `--pad` | `float` | `0.2` | Padding (seconds) added around each speech boundary |
-| `-f`, `--ffmpeg` | `str` | `C:\ProgramData\chocolatey\bin\ffmpeg.exe` | Path to FFmpeg executable |
+| `-f`, `--ffmpeg` | `str` | `auto-detected` | Path to FFmpeg executable (default: auto-detected via managed binary or PATH) |
 
 ---
 
@@ -147,19 +151,19 @@ python mortem.py -i <input_file> -o <output_file> [options]
 ### Silero VAD (Default — Recommended)
 Neural network-based acoustic voice activity detection. Fastest and most reliable for general use.
 ```bash
-python mortem.py -i input.mp4 -o output.mp4 --vad silero
+python main.py -i input.mp4 -o output.mp4 --vad silero
 ```
 
 ### Whisper Semantic VAD
 Uses OpenAI's Whisper model to transcribe audio and extract word-level timestamps. Best for content where semantic accuracy matters (e.g., podcasts with music).
 ```bash
-python mortem.py -i input.mp4 -o output.mp4 --vad whisper
+python main.py -i input.mp4 -o output.mp4 --vad whisper
 ```
 
 ### Energy-Based VAD
 Lightweight, zero-dependency VAD using signal energy thresholding. Great for clean recordings with obvious silence gaps.
 ```bash
-python mortem.py -i input.wav -o output.wav --vad energy
+python main.py -i input.wav -o output.wav --vad energy
 ```
 
 ---
@@ -169,19 +173,19 @@ python mortem.py -i input.wav -o output.wav --vad energy
 ### DeepFilterNet3 (Default — SOTA)
 State-of-the-art deep neural network for real-time speech enhancement. Supports CUDA GPU acceleration with chunked processing for O(1) memory usage.
 ```bash
-python mortem.py -i input.mp4 -o output.mp4 -m deepfilter
+python main.py -i input.mp4 -o output.mp4 -m deepfilter
 ```
 
 ### Spectral Gating
 Classic signal processing approach using `noisereduce` library. Lightweight and CPU-friendly.
 ```bash
-python mortem.py -i input.wav -o output.wav -m spectral
+python main.py -i input.wav -o output.wav -m spectral
 ```
 
 ### No Noise Reduction
 Skip noise reduction entirely — only perform silence trimming.
 ```bash
-python mortem.py -i input.mp4 -o output.mp4 -m none
+python main.py -i input.mp4 -o output.mp4 -m none
 ```
 
 ---
@@ -190,32 +194,32 @@ python mortem.py -i input.mp4 -o output.mp4 -m none
 
 ### Remove silence from a video (default settings)
 ```bash
-python mortem.py -i raw_video.mp4 -o clean_video.mp4
+python main.py -i raw_video.mp4 -o clean_video.mp4
 ```
 
 ### Podcast cleanup with aggressive silence removal
 ```bash
-python mortem.py -i podcast.wav -o podcast_clean.wav --min-silence 0.3 --pad 0.1
+python main.py -i podcast.wav -o podcast_clean.wav --min-silence 0.3 --pad 0.1
 ```
 
 ### Video with only silence trimming (no noise reduction)
 ```bash
-python mortem.py -i lecture.mp4 -o lecture_trimmed.mp4 -m none --vad silero
+python main.py -i lecture.mp4 -o lecture_trimmed.mp4 -m none --vad silero
 ```
 
 ### Full pipeline with Whisper VAD + DeepFilterNet3
 ```bash
-python mortem.py -i interview.mkv -o interview_clean.mkv -m deepfilter --vad whisper
+python main.py -i interview.mkv -o interview_clean.mkv -m deepfilter --vad whisper
 ```
 
 ### Audio-only processing with spectral gating
 ```bash
-python mortem.py -i recording.wav -o recording_clean.wav -m spectral --vad energy
+python main.py -i recording.wav -o recording_clean.wav -m spectral --vad energy
 ```
 
 ### Custom FFmpeg path
 ```bash
-python mortem.py -i input.mp4 -o output.mp4 -f /usr/bin/ffmpeg
+python main.py -i input.mp4 -o output.mp4 -f /usr/bin/ffmpeg
 ```
 
 ---
@@ -234,16 +238,30 @@ After processing, the tool generates:
 
 ## Architecture
 
-The project follows the **Strategy Pattern** with clean interface abstractions:
+The project is structured according to **Feature-First Clean Architecture (OOP, SOLID)** with strict layer decoupling and zero hardcoding:
 
 ```
-INoiseReductionStrategy          IVoiceActivityDetector          IMediaManager
-├── DeepFilterNetStrategy        ├── SileroBasedVAD              └── FFmpegMediaManager
-├── SpectralGatingStrategy       ├── WhisperBasedVAD
-                                 └── EnergyBasedVAD
-
-                    AudioProcessor (Orchestrator)
-                    StrategyFactory (Builder)
+autosilenttrimmer/
+├── core/                         # Constants, configurations, and domain exceptions
+│   ├── config.py
+│   ├── constants.py
+│   └── exceptions.py
+├── domain/                       # Core business contracts, entities, and models
+│   ├── contracts/                # Abstractions (IMediaManager, IVoiceActivityDetector, etc.)
+│   ├── entities/                 # Value objects (MediaSegment)
+│   └── models/                   # Command and Result DTOs
+├── application/                  # Pure application orchestration
+│   └── use_cases/
+│       └── process_media.py      # ProcessMediaUseCase
+├── infrastructure/               # Concrete external library implementations
+│   ├── media/                    # FFmpegMediaManager
+│   ├── noise_reduction/          # DeepFilterNet & SpectralGating strategies + Factory
+│   ├── vad/                      # Silero, Whisper & Energy-based VADs + Factory
+│   └── visualization/            # Matplotlib & Seaborn timeline plotter
+└── presentation/                 # Presentation and CLI interface
+    └── cli/
+        ├── parser.py             # CLI argument definitions
+        └── runner.py             # Composition root and execution runner
 ```
 
 ---

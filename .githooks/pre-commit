@@ -1,0 +1,32 @@
+#!/bin/sh
+# Husky-style tracked Git pre-commit hook
+# AutoSilentTrimmer Clean Architecture Quality Gates
+
+echo "[pre-commit] Executing AutoSilentTrimmer pre-commit quality gates..."
+
+# Detect available python runner (prefer local venv if present)
+if [ -f ".venv/Scripts/python.exe" ]; then
+    PYTHON_CMD=".venv/Scripts/python.exe"
+elif [ -f ".venv/bin/python" ]; then
+    PYTHON_CMD=".venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_CMD=python3
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_CMD=python
+elif command -v py >/dev/null 2>&1; then
+    PYTHON_CMD=py
+else
+    echo "[pre-commit] ERROR: Python executable not found in PATH."
+    exit 1
+fi
+
+"$PYTHON_CMD" scripts/pre_commit_check.py
+RESULT=$?
+
+if [ $RESULT -ne 0 ]; then
+    echo "[pre-commit] Commit rejected due to failed quality gate."
+    exit 1
+fi
+
+echo "[pre-commit] All quality gates passed."
+exit 0

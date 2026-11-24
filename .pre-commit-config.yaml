@@ -1,0 +1,10 @@
+# Standard pre-commit framework configuration
+repos:
+  - repo: local
+    hooks:
+      - id: autotrimmer-quality-gate
+        name: AutoSilentTrimmer Pre-Commit Quality Gate
+        entry: python scripts/pre_commit_check.py
+        language: system
+        pass_filenames: false
+        always_run: true
