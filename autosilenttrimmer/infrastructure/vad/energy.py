@@ -57,7 +57,7 @@ class EnergyBasedVAD(IVoiceActivityDetector):
         segments: list[MediaSegment] = []
         actual_duration = len(audio) / sample_rate
 
-        for s, e in zip(starts, ends):
+        for s, e in zip(starts, ends, strict=False):
             start_sec = s * window_sec
             end_sec = min(e * window_sec, actual_duration)
             if end_sec - start_sec >= self._config.energy_min_len_sec:

@@ -1,0 +1,40 @@
+"""Cross-platform process priority and battery awareness via psutil."""
+
+from __future__ import annotations
+
+import logging
+import os
+
+import psutil
+from autosilenttrimmer.domain.contracts.compute import IProcessPriorityController
+
+logger = logging.getLogger(__name__)
+
+
+class PsutilPriorityController(IProcessPriorityController):
+    """Applies low CPU/IO priority for polite background execution (Doc 01 §7.5)."""
+
+    LOW_BATTERY_THRESHOLD_PERCENT: float = 20.0
+
+    def apply_background_priority(self) -> None:
+        """Set background priority cleanly across Windows, macOS, and Linux."""
+        try:
+            proc = psutil.Process(os.getpid())
+            if os.name == "nt":
+                proc.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+                if hasattr(psutil, "IOPRIO_LOW"):
+                    proc.ionice(psutil.IOPRIO_LOW)
+            else:
+                proc.nice(10)
+        except Exception as exc:
+            logger.debug("Could not adjust process priority cleanly: %s", exc)
+
+    def is_low_battery(self) -> bool:
+        """Check battery level when running unplugged."""
+        try:
+            battery = psutil.sensors_battery()
+            if battery is None or battery.power_plugged:
+                return False
+            return float(battery.percent) <= self.LOW_BATTERY_THRESHOLD_PERCENT
+        except Exception:
+            return False

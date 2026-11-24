@@ -1,11 +1,1 @@
-numpy
-soundfile
-torch
-torchaudio
-noisereduce
-tqdm
-matplotlib
-seaborn
-deepfilternet
-faster-whisper
-imageio-ffmpeg
+-e .[ai,packaging,dev]

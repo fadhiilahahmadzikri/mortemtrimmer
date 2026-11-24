@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autosilenttrimmer.dev/schemas/release-manifest.schema.json",
+  "title": "AutoSilentTrimmer Agnostic Platform Release Manifest",
+  "description": "Shared contract for in-app RuntimeManager, Auto-Updater, and public Landing Page download matrix.",
+  "type": "object",
+  "required": ["schema_version", "app_version", "generated_at", "channels"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "app_version": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "release_notes_url": { "type": ["string", "null"] },
+    "signature_ed25519": { "type": "string" },
+    "channels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["installers", "runtime_packs"],
+        "properties": {
+          "installers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["platform_tag", "status"],
+              "properties": {
+                "platform_tag": {
+                  "type": "string",
+                  "enum": ["windows-x86_64", "windows-arm64", "darwin-arm64", "darwin-x86_64", "linux-x86_64", "linux-aarch64"]
+                },
+                "url": { "type": ["string", "null"] },
+                "sha256": { "type": "string" },
+                "sig_ed25519": { "type": "string" },
+                "size_bytes": { "type": "integer", "minimum": 0 },
+                "status": { "type": "string", "enum": ["available", "beta", "planned"] },
+                "min_os_version": { "type": "string" }
+              }
+            }
+          },
+          "runtime_packs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["pack_type", "platform_tag", "version", "url", "sha256"],
+              "properties": {
+                "pack_type": { "type": "string", "enum": ["ffmpeg", "ai-cpu", "ai-cuda12", "ai-mps", "ai-rocm"] },
+                "platform_tag": { "type": "string" },
+                "version": { "type": "string" },
+                "url": { "type": "string" },
+                "sha256": { "type": "string" },
+                "sig_ed25519": { "type": "string" },
+                "size_bytes": { "type": "integer", "minimum": 0 },
+                "requires_gpu": { "type": "boolean" },
+                "vendor": { "type": ["string", "null"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

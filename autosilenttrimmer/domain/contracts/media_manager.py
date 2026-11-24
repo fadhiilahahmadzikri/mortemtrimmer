@@ -1,4 +1,4 @@
-"""Media manager contract for audio extraction, multiplexing, and slicing."""
+"""Media manager contract for audio extraction, multiplexing, chunk encoding, and splicing."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from autosilenttrimmer.domain.entities.segment import MediaSegment
 
 
 class IMediaManager(ABC):
-    """Abstract interface for video/audio extraction, muxing, and slicing operations."""
+    """Abstract interface for video/audio extraction, muxing, chunking, and concatenation."""
 
     @abstractmethod
     def extract_audio(self, source_media_path: str, destination_audio_path: str) -> None:
@@ -31,6 +31,14 @@ class IMediaManager(ABC):
         media_path: str,
         segments: list[MediaSegment],
         output_path: str,
+        *,
+        video_encoder: str = "libx264",
+        copy_mode: bool = False,
     ) -> None:
         """Perform frame-accurate cutting and concatenation of media segments."""
+        pass
+
+    @abstractmethod
+    def concat_files(self, chunk_paths: list[str], output_path: str, is_video: bool) -> None:
+        """Losslessly concatenate already-trimmed homogeneous chunks via concat demuxer."""
         pass

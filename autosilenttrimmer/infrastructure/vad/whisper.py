@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 
-import torch
 from tqdm import tqdm
 
 from autosilenttrimmer.core.config import VADConfig
@@ -18,20 +17,22 @@ logger = logging.getLogger(__name__)
 class WhisperBasedVAD(IVoiceActivityDetector):
     """Faster-Whisper semantic VAD with word-level timestamp extraction."""
 
-    def __init__(self, config: VADConfig | None = None) -> None:
+    def __init__(self, config: VADConfig | None = None, device: str | None = None) -> None:
         self._config = config or VADConfig()
+        self._device = device
 
     def get_keep_segments(
         self, audio_path: str, manifest_path: str | None = None
     ) -> list[MediaSegment]:
         try:
+            import torch
             from faster_whisper import WhisperModel
         except ImportError as e:
             raise DependencyMissingException(
-                "Missing dependency 'faster-whisper' for Semantic VAD."
+                "Missing dependency 'faster-whisper' or 'torch' for Semantic VAD."
             ) from e
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = self._device or ("cuda" if torch.cuda.is_available() else "cpu")
         compute_type = "float16" if device == "cuda" else "int8"
 
         logger.info(

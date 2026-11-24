@@ -1,4 +1,4 @@
-"""AI models, libraries, and C++/DLL integrity diagnostics."""
+"""Core audio, AI models, and C++/DLL integrity diagnostics."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class EngineDiagnostic(ISystemDiagnostic):
-    """Probes Torchaudio linking, soundfile, noisereduce, DeepFilterNet3, and Whisper."""
+    """Probes SoundFile, PyAV, Torchaudio DLL linking, noisereduce, DeepFilterNet3, and Whisper."""
 
     @property
     def category_name(self) -> str:
@@ -20,81 +20,138 @@ class EngineDiagnostic(ISystemDiagnostic):
     def check(self) -> list[ReadinessItem]:
         items: list[ReadinessItem] = []
 
-        # 1. Torchaudio & C++ DLL integrity (WinError 127 guard)
+        # 1. Core Audio I/O & Energy VAD (always required in Lean Core)
         try:
+            import av
+            import numpy
+            import soundfile
+
+            items.append(
+                ReadinessItem(
+                    component="Core Audio & Media I/O",
+                    category=self.category_name,
+                    status=ReadinessStatus.READY,
+                    detail=f"PyAV {av.__version__}, libsndfile, NumPy {numpy.__version__}",
+                    is_critical=True,
+                )
+            )
+            items.append(
+                ReadinessItem(
+                    component="Energy Acoustic VAD",
+                    category=self.category_name,
+                    status=ReadinessStatus.READY,
+                    detail="Zero-dependency signal frame VAD operational",
+                    is_critical=True,
+                )
+            )
+        except ImportError as e:
+            items.append(
+                ReadinessItem(
+                    component="Core Audio & Media I/O",
+                    category=self.category_name,
+                    status=ReadinessStatus.FAILED,
+                    detail=f"Missing core dependency: {e}",
+                    is_critical=True,
+                    remediation="Reinstall core application package or dependencies.",
+                )
+            )
+
+        # 2. Torchaudio & C++ DLL integrity (WinError 127 guard; optional in Lean Core)
+        torch_available = False
+        try:
+            import torch
             import torchaudio
 
+            torch_available = True
             items.append(
                 ReadinessItem(
                     component="Torchaudio Runtime",
                     category=self.category_name,
                     status=ReadinessStatus.READY,
                     detail=f"Torchaudio {torchaudio.__version__} (DLLs verified)",
-                    is_critical=True,
+                    is_critical=False,
                 )
             )
         except OSError as e:
-            if "WinError 127" in str(e):
-                items.append(
-                    ReadinessItem(
-                        component="Torchaudio Runtime",
-                        category=self.category_name,
-                        status=ReadinessStatus.FAILED,
-                        detail="Architectural DLL conflict detected (WinError 127)",
-                        is_critical=True,
-                        remediation="Run: pip uninstall torch torchaudio -y && pip install torch torchaudio",
-                    )
-                )
-            else:
-                items.append(
-                    ReadinessItem(
-                        component="Torchaudio Runtime",
-                        category=self.category_name,
-                        status=ReadinessStatus.FAILED,
-                        detail=f"Torchaudio DLL load error: {e}",
-                        is_critical=True,
-                        remediation="Reinstall torch and torchaudio matching your system Python version.",
-                    )
-                )
-        except ImportError as e:
+            detail = (
+                "Architectural DLL conflict detected (WinError 127)"
+                if "WinError 127" in str(e)
+                else f"Torchaudio DLL load error: {e}"
+            )
             items.append(
                 ReadinessItem(
                     component="Torchaudio Runtime",
                     category=self.category_name,
                     status=ReadinessStatus.FAILED,
-                    detail=f"Import failed: {e}",
+                    detail=detail,
                     is_critical=True,
-                    remediation="Run: pip install torchaudio",
+                    remediation="Run: pip uninstall torch torchaudio -y && pip install torch torchaudio",
+                )
+            )
+        except ImportError:
+            try:
+                import torch
+
+                torch_available = True
+            except ImportError:
+                torch_available = False
+            items.append(
+                ReadinessItem(
+                    component="Torchaudio Runtime",
+                    category=self.category_name,
+                    status=ReadinessStatus.OPTIONAL_MISSING,
+                    detail="Torchaudio runtime pack not installed (optional for Core Energy VAD).",
+                    is_critical=False,
+                    remediation="Run --setup-runtime or install AI extras to enable neural audio models.",
                 )
             )
 
-        # 2. Soundfile & Noisereduce (Classical Gating)
+        # 3. Silero VAD (Neural Acoustic VAD)
+        items.append(
+            ReadinessItem(
+                component="Silero Acoustic VAD",
+                category=self.category_name,
+                status=ReadinessStatus.READY
+                if torch_available
+                else ReadinessStatus.OPTIONAL_MISSING,
+                detail=(
+                    "PyTorch Hub Silero VAD integration ready"
+                    if torch_available
+                    else "Requires AI Runtime Pack (PyTorch)"
+                ),
+                is_critical=False,
+                remediation=None
+                if torch_available
+                else "Run: autosilenttrimmer-cli --setup-runtime",
+            )
+        )
+
+        # 4. Spectral Gating (noisereduce)
         try:
             import noisereduce
-            import soundfile
 
             items.append(
                 ReadinessItem(
-                    component="Spectral Gating & Soundfile",
+                    component="Spectral Gating Denoiser",
                     category=self.category_name,
-                    status=ReadinessStatus.READY,
-                    detail="libsndfile and noisereduce operational",
-                    is_critical=True,
+                    status=ReadinessStatus.AVAILABLE,
+                    detail="noisereduce operational",
+                    is_critical=False,
                 )
             )
-        except ImportError as e:
+        except ImportError:
             items.append(
                 ReadinessItem(
-                    component="Spectral Gating & Soundfile",
+                    component="Spectral Gating Denoiser",
                     category=self.category_name,
-                    status=ReadinessStatus.FAILED,
-                    detail=f"Missing core audio dependency: {e}",
-                    is_critical=True,
-                    remediation="Run: pip install soundfile noisereduce",
+                    status=ReadinessStatus.OPTIONAL_MISSING,
+                    detail="noisereduce not installed in Lean Core",
+                    is_critical=False,
+                    remediation="Run --setup-runtime or: pip install noisereduce",
                 )
             )
 
-        # 3. DeepFilterNet3 (Neural Noise Reduction)
+        # 5. DeepFilterNet3 (Neural Noise Reduction)
         try:
             import df
 
@@ -115,7 +172,7 @@ class EngineDiagnostic(ISystemDiagnostic):
                     status=ReadinessStatus.OPTIONAL_MISSING,
                     detail="DeepFilterNet package not installed",
                     is_critical=False,
-                    remediation="To enable SOTA deep neural noise reduction: pip install deepfilternet",
+                    remediation="Run --setup-runtime or: pip install deepfilternet",
                 )
             )
         except Exception as e:
@@ -126,22 +183,11 @@ class EngineDiagnostic(ISystemDiagnostic):
                     status=ReadinessStatus.WARNING,
                     detail=f"DeepFilterNet initialization warning: {e}",
                     is_critical=False,
-                    remediation="Check Rust/C++ runtime or reinstall: pip install --force-reinstall deepfilternet",
+                    remediation="Check Rust/C++ runtime or reinstall deepfilternet.",
                 )
             )
 
-        # 4. Silero VAD (Neural Acoustic VAD)
-        items.append(
-            ReadinessItem(
-                component="Silero Acoustic VAD",
-                category=self.category_name,
-                status=ReadinessStatus.READY,
-                detail="PyTorch Hub Silero VAD integration ready",
-                is_critical=False,
-            )
-        )
-
-        # 5. Faster-Whisper (Semantic VAD)
+        # 6. Faster-Whisper (Semantic VAD)
         try:
             import faster_whisper
 
@@ -162,11 +208,11 @@ class EngineDiagnostic(ISystemDiagnostic):
                     status=ReadinessStatus.OPTIONAL_MISSING,
                     detail="faster-whisper package not installed",
                     is_critical=False,
-                    remediation="To enable Semantic NLP VAD: pip install faster-whisper",
+                    remediation="Run --setup-runtime or: pip install faster-whisper",
                 )
             )
 
-        # 6. Matplotlib & Seaborn (Scientific Timeline Visualization)
+        # 7. Matplotlib & Seaborn (Scientific Timeline Visualization)
         try:
             import matplotlib
             import seaborn
@@ -180,15 +226,15 @@ class EngineDiagnostic(ISystemDiagnostic):
                     is_critical=False,
                 )
             )
-        except ImportError as e:
+        except ImportError:
             items.append(
                 ReadinessItem(
                     component="Scientific Visualizer",
                     category=self.category_name,
-                    status=ReadinessStatus.WARNING,
-                    detail=f"Visualization dependencies missing: {e}",
+                    status=ReadinessStatus.OPTIONAL_MISSING,
+                    detail="Visualization libraries not installed in Lean Core",
                     is_critical=False,
-                    remediation="To generate timeline charts: pip install matplotlib seaborn",
+                    remediation="Install optional AI/extras for PNG timeline charts.",
                 )
             )
 

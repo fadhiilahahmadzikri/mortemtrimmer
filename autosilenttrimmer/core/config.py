@@ -1,4 +1,4 @@
-"""Configuration data structures for the pipeline."""
+"""Configuration data structures for the pipeline and application runtime."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from autosilenttrimmer.core.constants import (
     DEFAULT_AUDIO_BITRATE,
     DEFAULT_AUDIO_CHANNELS_MONO,
+    DEFAULT_CHUNK_MAX_RETRIES,
+    DEFAULT_COMPUTE_POLICY,
     DEFAULT_DEEPFILTER_CHUNK_DURATION_SEC,
     DEFAULT_ENERGY_DB_OFFSET,
     DEFAULT_ENERGY_DILATION_PAD_SEC,
@@ -14,15 +16,22 @@ from autosilenttrimmer.core.constants import (
     DEFAULT_ENERGY_PEAK_PERCENTILE,
     DEFAULT_ENERGY_WINDOW_SEC,
     DEFAULT_FFMPEG_EXECUTABLE,
+    DEFAULT_LANGUAGE,
     DEFAULT_MIN_SILENCE_GAP_SEC,
     DEFAULT_NOISE_REDUCTION_METHOD,
+    DEFAULT_ON_CONFLICT,
+    DEFAULT_OUTPUT_LOCATION,
+    DEFAULT_OUTPUT_NAMING_TEMPLATE,
     DEFAULT_PAD_SEC,
+    DEFAULT_RELEASE_CHANNEL,
+    DEFAULT_RELEASE_MANIFEST_URL,
     DEFAULT_SAMPLE_RATE_DEEPFILTER,
     DEFAULT_SAMPLE_RATE_VAD,
     DEFAULT_SILERO_MIN_SPEECH_DURATION_MS,
     DEFAULT_SILERO_MODEL_NAME,
     DEFAULT_SILERO_REPO,
     DEFAULT_SPECTRAL_PROP_DECREASE,
+    DEFAULT_TRIM_STRATEGY,
     DEFAULT_VAD_METHOD,
     DEFAULT_WHISPER_LANGUAGE,
     DEFAULT_WHISPER_MAX_WORD_DURATION_SEC,
@@ -34,6 +43,8 @@ from autosilenttrimmer.core.constants import (
     PLOT_DEFAULT_DPI,
     PLOT_FIG_HEIGHT,
     PLOT_FIG_WIDTH,
+    TARGET_CHUNK_MAX_SEC,
+    TARGET_CHUNK_MIN_SEC,
 )
 
 
@@ -96,6 +107,50 @@ class VisualizerConfig:
 
 
 @dataclass(frozen=True)
+class ExecutionConfig:
+    """Execution planning, parallelism, and fault tolerance configuration."""
+
+    strategy: str = DEFAULT_TRIM_STRATEGY
+    compute_policy: str = DEFAULT_COMPUTE_POLICY
+    max_workers: int | None = None
+    background_priority: bool = True
+    pause_on_low_battery: bool = True
+    target_chunk_min_sec: float = TARGET_CHUNK_MIN_SEC
+    target_chunk_max_sec: float = TARGET_CHUNK_MAX_SEC
+    chunk_max_retries: int = DEFAULT_CHUNK_MAX_RETRIES
+    frame_accurate: bool = True
+
+
+@dataclass(frozen=True)
+class OutputPolicyConfig:
+    """Non-destructive output resolution policy."""
+
+    location: str = DEFAULT_OUTPUT_LOCATION
+    custom_dir: str | None = None
+    naming_template: str = DEFAULT_OUTPUT_NAMING_TEMPLATE
+    on_conflict: str = DEFAULT_ON_CONFLICT
+
+
+@dataclass(frozen=True)
+class RuntimeConfig:
+    """Managed runtime pack and update channel configuration."""
+
+    manifest_url: str = DEFAULT_RELEASE_MANIFEST_URL
+    channel: str = DEFAULT_RELEASE_CHANNEL
+    public_key_hex: str | None = None
+
+
+@dataclass(frozen=True)
+class UIConfig:
+    """Minimal tray UI and localization settings."""
+
+    language: str = DEFAULT_LANGUAGE
+    enable_tray: bool = True
+    enable_notifications: bool = True
+    generate_visual_artifacts: bool = False
+
+
+@dataclass(frozen=True)
 class MediaProcessingConfig:
     """Aggregate configuration for processing pipeline."""
 
@@ -104,3 +159,7 @@ class MediaProcessingConfig:
     vad: VADConfig = field(default_factory=VADConfig)
     noise_reduction: NoiseReductionConfig = field(default_factory=NoiseReductionConfig)
     visualizer: VisualizerConfig = field(default_factory=VisualizerConfig)
+    execution: ExecutionConfig = field(default_factory=ExecutionConfig)
+    output_policy: OutputPolicyConfig = field(default_factory=OutputPolicyConfig)
+    runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
+    ui: UIConfig = field(default_factory=UIConfig)

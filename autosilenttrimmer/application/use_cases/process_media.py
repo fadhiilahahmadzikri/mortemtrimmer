@@ -1,36 +1,65 @@
-"""Process media use case: orchestrates audio extraction, VAD, slicing, and denoising."""
+"""Process media use case: backward-compatible single-shot orchestration facade."""
 
 from __future__ import annotations
 
 import logging
 import os
-import shutil
-import tempfile
 
-import soundfile as sf
-
-from autosilenttrimmer.core.constants import (
-    MANIFEST_SUFFIX,
-    TEMP_AUDIO_SUFFIX,
-    TEMP_VIDEO_SUFFIX,
-    VIDEO_EXTENSIONS,
-)
-from autosilenttrimmer.core.exceptions import (
-    FormatMismatchException,
-    MediaFileNotFoundException,
-)
+from autosilenttrimmer.application.use_cases.job_orchestrator import JobOrchestrator
+from autosilenttrimmer.core.config import MediaProcessingConfig
+from autosilenttrimmer.domain.contracts.compute import ICapabilityProber, IComputeBackend
+from autosilenttrimmer.domain.contracts.event_bus import IEventBus
 from autosilenttrimmer.domain.contracts.media_manager import IMediaManager
+from autosilenttrimmer.domain.contracts.media_prober import IMediaProber
+from autosilenttrimmer.domain.contracts.media_verifier import IMediaVerifier
 from autosilenttrimmer.domain.contracts.noise_reduction import INoiseReductionStrategy
 from autosilenttrimmer.domain.contracts.vad import IVoiceActivityDetector
 from autosilenttrimmer.domain.contracts.visualizer import IVisualizer
 from autosilenttrimmer.domain.entities.segment import MediaSegment
+from autosilenttrimmer.domain.models.media_probe import MediaProbeInfo
+from autosilenttrimmer.domain.models.processing_command import ProcessMediaCommand
 from autosilenttrimmer.domain.models.processing_result import ProcessingResult
+from autosilenttrimmer.infrastructure.compute.backend_selector import PolicyComputeBackend
+from autosilenttrimmer.infrastructure.compute.capability_prober import (
+    CrossPlatformCapabilityProber,
+)
+from autosilenttrimmer.infrastructure.events.in_memory_bus import InMemoryEventBus
+from autosilenttrimmer.infrastructure.media.ffmpeg_locator import ManagedFFmpegLocator
+from autosilenttrimmer.infrastructure.media.pyav_prober import PyAVMediaProber
+from autosilenttrimmer.infrastructure.media.pyav_verifier import PyAVMediaVerifier
+from autosilenttrimmer.infrastructure.strategies.auto_silence import AutoSilenceTrimStrategy
 
 logger = logging.getLogger(__name__)
 
 
+class _PassThroughStrategy(AutoSilenceTrimStrategy):
+    """Retains entire media stream cleanly when VAD strategy is disabled (--vad none)."""
+
+    def __init__(self) -> None:
+        pass
+
+    @property
+    def strategy_id(self) -> str:
+        return "passthrough"
+
+    @property
+    def requires_frame_accuracy(self) -> bool:
+        return False
+
+    def plan_keep_segments(
+        self,
+        probe_info: MediaProbeInfo,
+        audio_path: str | None = None,
+        manifest_path: str | None = None,
+        params: dict | None = None,
+    ) -> list[MediaSegment]:
+        if probe_info.duration_sec <= 0.0:
+            return []
+        return [MediaSegment(start=0.0, end=probe_info.duration_sec)]
+
+
 class ProcessMediaUseCase:
-    """Use case to execute the full audio/video silence trimming and noise reduction pipeline."""
+    """Use case preserving legacy CLI signature while routing through JobOrchestrator."""
 
     def __init__(
         self,
@@ -38,124 +67,53 @@ class ProcessMediaUseCase:
         vad_strategy: IVoiceActivityDetector | None = None,
         noise_reduction_strategy: INoiseReductionStrategy | None = None,
         visualizer: IVisualizer | None = None,
+        *,
+        media_prober: IMediaProber | None = None,
+        media_verifier: IMediaVerifier | None = None,
+        capability_prober: ICapabilityProber | None = None,
+        compute_backend: IComputeBackend | None = None,
+        event_bus: IEventBus | None = None,
+        config: MediaProcessingConfig | None = None,
     ) -> None:
         self._media_manager = media_manager
         self._vad_strategy = vad_strategy
         self._noise_reduction_strategy = noise_reduction_strategy
         self._visualizer = visualizer
 
-    def execute(self, input_path: str, output_path: str) -> ProcessingResult:
-        """Execute the end-to-end processing pipeline."""
-        if not os.path.exists(input_path):
-            raise MediaFileNotFoundException(f"Input file does not exist: {input_path}")
+        locator = ManagedFFmpegLocator()
+        cap_prober = capability_prober or CrossPlatformCapabilityProber(locator)
+        backend = compute_backend or PolicyComputeBackend(cap_prober)
+        trim_strategy = (
+            AutoSilenceTrimStrategy(vad_strategy)
+            if vad_strategy is not None
+            else _PassThroughStrategy()
+        )
+        cfg = config or MediaProcessingConfig()
 
-        _, in_ext = os.path.splitext(input_path.lower())
-        _, out_ext = os.path.splitext(output_path.lower())
+        self._orchestrator = JobOrchestrator(
+            media_manager=media_manager,
+            media_prober=media_prober or PyAVMediaProber(),
+            media_verifier=media_verifier or PyAVMediaVerifier(),
+            trim_strategy=trim_strategy,
+            capability_prober=cap_prober,
+            compute_backend=backend,
+            event_bus=event_bus or InMemoryEventBus(),
+            config=cfg,
+            noise_reduction=noise_reduction_strategy,
+            visualizer=visualizer,
+        )
 
-        is_input_video = in_ext in VIDEO_EXTENSIONS
-        is_output_video = out_ext in VIDEO_EXTENSIONS
-
-        if not is_input_video and is_output_video:
-            raise FormatMismatchException(
-                f"Format Mismatch Error: Input is an audio file '{in_ext}', "
-                f"but output is set to a video container '{out_ext}'. "
-                "Please specify an audio extension (e.g., .wav, .aac, .mp3) for the output."
-            )
-
-        fd_raw, raw_audio = tempfile.mkstemp(suffix=TEMP_AUDIO_SUFFIX)
-        os.close(fd_raw)
-
-        try:
-            if is_input_video:
-                self._media_manager.extract_audio(input_path, raw_audio)
-                target_audio = raw_audio
-            else:
-                target_audio = input_path
-                shutil.copy(input_path, raw_audio)
-
-            audio_info = sf.info(target_audio)
-            original_duration = float(audio_info.duration)
-
-            segments: list[MediaSegment] = []
-            manifest_path: str | None = None
-
-            if self._vad_strategy:
-                manifest_path = output_path + MANIFEST_SUFFIX
-                logger.info("Executing Voice Activity Detection...")
-                segments = self._vad_strategy.get_keep_segments(target_audio, manifest_path)
-                logger.info("VAD detected %d speech segments.", len(segments))
-
-            cut_suffix = TEMP_VIDEO_SUFFIX if is_input_video else TEMP_AUDIO_SUFFIX
-            fd_cut, cut_media = tempfile.mkstemp(suffix=cut_suffix)
-            os.close(fd_cut)
-
-            try:
-                if self._vad_strategy:
-                    self._media_manager.slice_and_concat(input_path, segments, cut_media)
-                    final_duration = sum(s.duration for s in segments)
-                else:
-                    shutil.copy(input_path, cut_media)
-                    final_duration = original_duration
-
-                if self._noise_reduction_strategy:
-                    fd_cut_raw, cut_raw_audio = tempfile.mkstemp(suffix=TEMP_AUDIO_SUFFIX)
-                    fd_cut_clean, cut_clean_audio = tempfile.mkstemp(suffix=TEMP_AUDIO_SUFFIX)
-                    os.close(fd_cut_raw)
-                    os.close(fd_cut_clean)
-
-                    try:
-                        if is_input_video:
-                            self._media_manager.extract_audio(cut_media, cut_raw_audio)
-                            audio_to_enhance = cut_raw_audio
-                        else:
-                            audio_to_enhance = cut_media
-
-                        logger.info("Executing noise reduction...")
-                        self._noise_reduction_strategy.process(audio_to_enhance, cut_clean_audio)
-
-                        if is_input_video:
-                            self._media_manager.merge_audio(cut_media, cut_clean_audio, output_path)
-                        else:
-                            self._media_manager.export_audio(cut_clean_audio, output_path)
-                    finally:
-                        if os.path.exists(cut_raw_audio):
-                            os.remove(cut_raw_audio)
-                        if os.path.exists(cut_clean_audio):
-                            os.remove(cut_clean_audio)
-                else:
-                    if is_input_video:
-                        shutil.copy(cut_media, output_path)
-                    else:
-                        self._media_manager.export_audio(cut_media, output_path)
-
-            finally:
-                if os.path.exists(cut_media):
-                    os.remove(cut_media)
-
-            plot_path: str | None = None
-            if self._vad_strategy and self._visualizer:
-                logger.info("Generating timeline plot...")
-                plot_path = self._visualizer.generate_timeline_plot(
-                    segments, original_duration, output_path
-                )
-
-            silence_removed = max(0.0, original_duration - final_duration)
-            reduction_percentage = (
-                (silence_removed / original_duration) * 100.0 if original_duration > 0 else 0.0
-            )
-
-            return ProcessingResult(
-                input_path=input_path,
-                output_path=output_path,
-                original_duration=original_duration,
-                final_duration=final_duration,
-                silence_removed_duration=silence_removed,
-                reduction_percentage=reduction_percentage,
-                segments_retained_count=len(segments),
-                manifest_path=manifest_path,
-                plot_path=plot_path,
-            )
-
-        finally:
-            if os.path.exists(raw_audio):
-                os.remove(raw_audio)
+    def execute(
+        self,
+        input_path: str,
+        output_path: str | None = None,
+        command: ProcessMediaCommand | None = None,
+    ) -> ProcessingResult:
+        """Execute end-to-end processing pipeline with probing, planning, and verification."""
+        if command is not None:
+            return self._orchestrator.execute_job(command)
+        cmd = ProcessMediaCommand(
+            input_path=os.path.abspath(input_path),
+            output_path=os.path.abspath(output_path) if output_path else None,
+        )
+        return self._orchestrator.execute_job(cmd)

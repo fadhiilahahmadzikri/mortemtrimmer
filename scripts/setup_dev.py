@@ -10,7 +10,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def run_command(cmd: list[str]) -> bool:
-    """Execute a system command and print output."""
+    """Execute a system command cleanly."""
     print(f"-> {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=PROJECT_ROOT)
     return result.returncode == 0
@@ -18,17 +18,12 @@ def run_command(cmd: list[str]) -> bool:
 
 def setup() -> int:
     """Install dependencies and register multi-stage git hooks."""
-    print("=================================================================")
     print("AutoSilentTrimmer: Developer Environment Initialization")
-    print("=================================================================")
 
-    # 1. Install pre-commit and ruff if missing
-    pip_cmd = [sys.executable, "-m", "pip", "install", "pre-commit", "ruff"]
-    if not run_command(pip_cmd):
-        print("Error: Failed to install pre-commit and ruff.")
+    if not run_command([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"]):
+        print("Error: Failed to install project dependencies.")
         return 1
 
-    # 2. Register multi-stage pre-commit hooks
     hooks_cmd = [
         sys.executable,
         "-m",
@@ -45,8 +40,7 @@ def setup() -> int:
         print("Error: Failed to install pre-commit hooks.")
         return 1
 
-    print("\nEnvironment initialization complete!")
-    print("Git hooks configured: pre-commit, commit-msg, and pre-push are active.")
+    print("Environment initialization complete. Multi-stage hooks active.")
     return 0
 
 

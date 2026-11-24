@@ -18,7 +18,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
           cache: "pip"
 
       - name: Cache Pre-Commit Environments
@@ -33,11 +33,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install pre-commit ruff
 
       - name: Execute Pre-Commit Quality Gates
         run: |
           pre-commit run --all-files --show-diff-on-failure
+
+      - name: Execute Unit & Integration Tests
+        run: |
+          pytest tests/unit -v
 
       - name: Execute Pre-Flight System Readiness
         run: |

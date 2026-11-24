@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import logging
 
-import torch
 from tqdm import tqdm
 
 from autosilenttrimmer.core.config import VADConfig
 from autosilenttrimmer.core.constants import DEFAULT_SAMPLE_RATE_VAD
+from autosilenttrimmer.core.exceptions import DependencyMissingException
 from autosilenttrimmer.domain.contracts.vad import IVoiceActivityDetector
 from autosilenttrimmer.domain.entities.segment import MediaSegment
 
@@ -24,6 +24,13 @@ class SileroBasedVAD(IVoiceActivityDetector):
     def get_keep_segments(
         self, audio_path: str, manifest_path: str | None = None
     ) -> list[MediaSegment]:
+        try:
+            import torch
+        except ImportError as exc:
+            raise DependencyMissingException(
+                "PyTorch is required for Silero VAD. Run --setup-runtime to install AI Runtime Pack."
+            ) from exc
+
         logger.info("Loading Silero VAD neural model...")
         model, utils = torch.hub.load(
             repo_or_dir=self._config.silero_repo,

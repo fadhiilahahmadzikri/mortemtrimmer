@@ -1,4 +1,4 @@
-"""FFmpeg media manager for audio extraction, multiplexing, and precision splicing."""
+"""FFmpeg media manager for audio extraction, muxing, chunk encoding, and lossless concat."""
 
 from __future__ import annotations
 
@@ -23,11 +23,15 @@ from autosilenttrimmer.core.constants import (
     VIDEO_CODEC_LIBX264,
     VIDEO_EXTENSIONS,
 )
-from autosilenttrimmer.core.exceptions import FFmpegExecutionException
+from autosilenttrimmer.core.exceptions import FFmpegExecutionException, MergeException
 from autosilenttrimmer.domain.contracts.media_manager import IMediaManager
 from autosilenttrimmer.domain.entities.segment import MediaSegment
 
 logger = logging.getLogger(__name__)
+
+
+def _win_no_window_flags() -> int:
+    return getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
 
 
 class FFmpegMediaManager(IMediaManager):
@@ -49,7 +53,7 @@ class FFmpegMediaManager(IMediaManager):
         return env
 
     def _verify_ffmpeg_active(self) -> None:
-        logger.info("Validating FFmpeg executable integrity...")
+        logger.debug("Validating FFmpeg executable integrity...")
         try:
             subprocess.run(
                 [self._ffmpeg_path, "-version"],
@@ -57,6 +61,7 @@ class FFmpegMediaManager(IMediaManager):
                 capture_output=True,
                 text=True,
                 env=self._get_clean_env(),
+                creationflags=_win_no_window_flags(),
             )
         except subprocess.CalledProcessError as e:
             raise FFmpegExecutionException(
@@ -133,6 +138,9 @@ class FFmpegMediaManager(IMediaManager):
         media_path: str,
         segments: list[MediaSegment],
         output_path: str,
+        *,
+        video_encoder: str = VIDEO_CODEC_LIBX264,
+        copy_mode: bool = False,
     ) -> None:
         if not segments:
             shutil.copy(media_path, output_path)
@@ -140,123 +148,223 @@ class FFmpegMediaManager(IMediaManager):
 
         _, ext = os.path.splitext(media_path)
         is_video = ext.lower() in VIDEO_EXTENSIONS
-        total_keep = sum(s.duration for s in segments)
-        count = len(segments)
 
-        logger.info("Splicing %d segments | Retained duration: %.2fs", count, total_keep)
+        if copy_mode and is_video and len(segments) == 1:
+            start, end = segments[0].start, segments[0].end
+            cmd = [
+                self._ffmpeg_path,
+                "-y",
+                "-ss",
+                f"{start:.6f}",
+                "-to",
+                f"{end:.6f}",
+                "-i",
+                media_path,
+                "-c",
+                "copy",
+                "-avoid_negative_ts",
+                "make_zero",
+                output_path,
+            ]
+            self._run_ffmpeg(cmd)
+            return
 
-        fc_path = None
-        try:
-            filter_parts: list[str] = []
+        filter_complex, map_args, codec_args = self._build_filter_graph(
+            segments=segments,
+            is_video=is_video,
+            video_encoder=video_encoder,
+        )
 
-            if count == 1:
-                start, end = segments[0].start, segments[0].end
-                if is_video:
-                    filter_parts.append(
-                        f"[0:v]trim=start={start:.6f}:end={end:.6f},setpts=PTS-STARTPTS[vout];"
-                    )
-                    filter_parts.append(
-                        f"[0:a]atrim=start={start:.6f}:end={end:.6f},asetpts=PTS-STARTPTS[aout]"
-                    )
-                    map_args = ["-map", "[vout]", "-map", "[aout]"]
-                    codec_args = [
-                        "-c:v",
-                        VIDEO_CODEC_LIBX264,
-                        "-bf",
-                        DEFAULT_X264_BF,
-                        "-crf",
-                        DEFAULT_X264_CRF,
-                        "-preset",
-                        DEFAULT_X264_PRESET,
-                        "-c:a",
-                        AUDIO_CODEC_AAC,
-                        "-b:a",
-                        DEFAULT_AUDIO_BITRATE,
-                    ]
-                else:
-                    filter_parts.append(
-                        f"[0:a]atrim=start={start:.6f}:end={end:.6f},asetpts=PTS-STARTPTS[aout]"
-                    )
-                    map_args = ["-map", "[aout]"]
-                    codec_args = ["-c:a", AUDIO_CODEC_PCM_S16LE]
-            else:
-                if is_video:
-                    split_v = "".join(f"[v_s{i}]" for i in range(count))
-                    split_a = "".join(f"[a_s{i}]" for i in range(count))
-                    filter_parts.append(f"[0:v]split={count}{split_v};")
-                    filter_parts.append(f"[0:a]asplit={count}{split_a};")
-
-                    for i, seg in enumerate(segments):
-                        filter_parts.append(
-                            f"[v_s{i}]trim=start={seg.start:.6f}:end={seg.end:.6f},"
-                            f"setpts=PTS-STARTPTS[v{i}];"
-                        )
-                        filter_parts.append(
-                            f"[a_s{i}]atrim=start={seg.start:.6f}:end={seg.end:.6f},"
-                            f"asetpts=PTS-STARTPTS[a{i}];"
-                        )
-
-                    v_inputs = "".join(f"[v{i}]" for i in range(count))
-                    a_inputs = "".join(f"[a{i}]" for i in range(count))
-
-                    filter_parts.append(f"{v_inputs}concat=n={count}:v=1:a=0[vout];")
-                    filter_parts.append(f"{a_inputs}concat=n={count}:v=0:a=1[aout]")
-
-                    map_args = ["-map", "[vout]", "-map", "[aout]"]
-                    codec_args = [
-                        "-c:v",
-                        VIDEO_CODEC_LIBX264,
-                        "-bf",
-                        DEFAULT_X264_BF,
-                        "-crf",
-                        DEFAULT_X264_CRF,
-                        "-preset",
-                        DEFAULT_X264_PRESET,
-                        "-c:a",
-                        AUDIO_CODEC_AAC,
-                        "-b:a",
-                        DEFAULT_AUDIO_BITRATE,
-                    ]
-                else:
-                    split_a = "".join(f"[a_s{i}]" for i in range(count))
-                    filter_parts.append(f"[0:a]asplit={count}{split_a};")
-
-                    for i, seg in enumerate(segments):
-                        filter_parts.append(
-                            f"[a_s{i}]atrim=start={seg.start:.6f}:end={seg.end:.6f},"
-                            f"asetpts=PTS-STARTPTS[a{i}];"
-                        )
-
-                    a_inputs = "".join(f"[a{i}]" for i in range(count))
-                    filter_parts.append(f"{a_inputs}concat=n={count}:v=0:a=1[aout]")
-
-                    map_args = ["-map", "[aout]"]
-                    codec_args = ["-c:a", AUDIO_CODEC_PCM_S16LE]
-
-            filter_complex = "".join(filter_parts)
-
-            fd_fc, fc_path = tempfile.mkstemp(suffix=TEMP_SCRIPT_SUFFIX)
-            os.close(fd_fc)
-            with open(fc_path, "w", encoding="utf-8") as f:
-                f.write(filter_complex)
-
-            logger.info("Executing filter complex concat with %d segments...", count)
+        if len(filter_complex) < 6000:
+            logger.info(
+                "Executing filter complex (%d segments, encoder=%s)...",
+                len(segments),
+                video_encoder if is_video else AUDIO_CODEC_PCM_S16LE,
+            )
             command = [
                 self._ffmpeg_path,
                 "-y",
                 "-i",
                 media_path,
-                "-filter_complex_script",
+                "-filter_complex",
+                filter_complex,
+                *map_args,
+                *codec_args,
+                output_path,
+            ]
+            self._run_ffmpeg(command)
+            return
+
+        fd_fc, fc_path = tempfile.mkstemp(suffix=TEMP_SCRIPT_SUFFIX)
+        os.close(fd_fc)
+        try:
+            with open(fc_path, "w", encoding="utf-8") as f:
+                f.write(filter_complex)
+
+            logger.info(
+                "Executing filter complex file (%d segments, encoder=%s)...",
+                len(segments),
+                video_encoder if is_video else AUDIO_CODEC_PCM_S16LE,
+            )
+            command = [
+                self._ffmpeg_path,
+                "-y",
+                "-i",
+                media_path,
+                "-/filter_complex",
                 fc_path,
                 *map_args,
                 *codec_args,
                 output_path,
             ]
             self._run_ffmpeg(command)
-
         finally:
-            if fc_path and os.path.exists(fc_path):
+            if os.path.exists(fc_path):
                 os.remove(fc_path)
+
+    def concat_files(self, chunk_paths: list[str], output_path: str, is_video: bool) -> None:
+        """Losslessly concatenate chunk artifacts via FFmpeg concat demuxer (Doc 01 §7.6)."""
+        if not chunk_paths:
+            raise MergeException("No chunk artifacts supplied for concatenation.")
+        if len(chunk_paths) == 1:
+            shutil.copyfile(chunk_paths[0], output_path)
+            return
+
+        fd_list, list_path = tempfile.mkstemp(suffix=TEMP_SCRIPT_SUFFIX)
+        os.close(fd_list)
+        try:
+            with open(list_path, "w", encoding="utf-8") as f:
+                for p in chunk_paths:
+                    safe = os.path.abspath(p).replace("'", "'\\''")
+                    f.write(f"file '{safe}'\n")
+
+            lossless_cmd = [
+                self._ffmpeg_path,
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                list_path,
+                "-c",
+                "copy",
+                output_path,
+            ]
+            try:
+                self._run_ffmpeg(lossless_cmd)
+                return
+            except FFmpegExecutionException as exc:
+                logger.warning("Lossless concat failed (%s); falling back to uniform remux.", exc)
+
+            fallback_codec = (
+                [
+                    "-c:v",
+                    VIDEO_CODEC_LIBX264,
+                    "-c:a",
+                    AUDIO_CODEC_AAC,
+                    "-b:a",
+                    DEFAULT_AUDIO_BITRATE,
+                ]
+                if is_video
+                else ["-c:a", AUDIO_CODEC_PCM_S16LE]
+            )
+            fallback_cmd = [
+                self._ffmpeg_path,
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                list_path,
+                *fallback_codec,
+                output_path,
+            ]
+            try:
+                self._run_ffmpeg(fallback_cmd)
+            except FFmpegExecutionException as exc:
+                raise MergeException(f"Chunk merge failed: {exc}") from exc
+        finally:
+            if os.path.exists(list_path):
+                os.remove(list_path)
+
+    def _build_filter_graph(
+        self,
+        *,
+        segments: list[MediaSegment],
+        is_video: bool,
+        video_encoder: str,
+    ) -> tuple[str, list[str], list[str]]:
+        count = len(segments)
+        filter_parts: list[str] = []
+
+        if count == 1:
+            s, e = segments[0].start, segments[0].end
+            if is_video:
+                filter_parts.append(
+                    f"[0:v]trim=start={s:.6f}:end={e:.6f},setpts=PTS-STARTPTS[vout];"
+                )
+            filter_parts.append(f"[0:a]atrim=start={s:.6f}:end={e:.6f},asetpts=PTS-STARTPTS[aout]")
+        else:
+            if is_video:
+                split_v = "".join(f"[v_s{i}]" for i in range(count))
+                filter_parts.append(f"[0:v]split={count}{split_v};")
+            split_a = "".join(f"[a_s{i}]" for i in range(count))
+            filter_parts.append(f"[0:a]asplit={count}{split_a};")
+
+            for i, seg in enumerate(segments):
+                if is_video:
+                    filter_parts.append(
+                        f"[v_s{i}]trim=start={seg.start:.6f}:end={seg.end:.6f},"
+                        f"setpts=PTS-STARTPTS[v{i}];"
+                    )
+                filter_parts.append(
+                    f"[a_s{i}]atrim=start={seg.start:.6f}:end={seg.end:.6f},"
+                    f"asetpts=PTS-STARTPTS[a{i}];"
+                )
+
+            if is_video:
+                v_inputs = "".join(f"[v{i}]" for i in range(count))
+                filter_parts.append(f"{v_inputs}concat=n={count}:v=1:a=0[vout];")
+            a_inputs = "".join(f"[a{i}]" for i in range(count))
+            filter_parts.append(f"{a_inputs}concat=n={count}:v=0:a=1[aout]")
+
+        if is_video:
+            map_args = ["-map", "[vout]", "-map", "[aout]"]
+            codec_args = self._video_codec_args(video_encoder)
+        else:
+            map_args = ["-map", "[aout]"]
+            codec_args = ["-c:a", AUDIO_CODEC_PCM_S16LE]
+
+        return "".join(filter_parts), map_args, codec_args
+
+    @staticmethod
+    def _video_codec_args(video_encoder: str) -> list[str]:
+        if video_encoder == VIDEO_CODEC_LIBX264:
+            return [
+                "-c:v",
+                VIDEO_CODEC_LIBX264,
+                "-bf",
+                DEFAULT_X264_BF,
+                "-crf",
+                DEFAULT_X264_CRF,
+                "-preset",
+                DEFAULT_X264_PRESET,
+                "-c:a",
+                AUDIO_CODEC_AAC,
+                "-b:a",
+                DEFAULT_AUDIO_BITRATE,
+            ]
+        # Hardware encoder options (NVENC / QSV / AMF / VideoToolbox / VAAPI)
+        return [
+            "-c:v",
+            video_encoder,
+            "-c:a",
+            AUDIO_CODEC_AAC,
+            "-b:a",
+            DEFAULT_AUDIO_BITRATE,
+        ]
 
     def _run_ffmpeg(self, command: list[str]) -> None:
         try:
@@ -266,6 +374,7 @@ class FFmpegMediaManager(IMediaManager):
                 capture_output=True,
                 text=True,
                 env=self._get_clean_env(),
+                creationflags=_win_no_window_flags(),
             )
         except subprocess.CalledProcessError as e:
             raise FFmpegExecutionException(f"FFmpeg execution failed:\n{e.stderr}") from e

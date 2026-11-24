@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class ReadinessStatus(str, Enum):
+class ReadinessStatus(StrEnum):
     """Status indicating health or availability of a system component."""
 
     READY = "READY"

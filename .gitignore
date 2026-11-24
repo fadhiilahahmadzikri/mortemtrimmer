@@ -8,17 +8,20 @@ ENV/
 __pycache__/
 *.py[cod]
 *$py.class
+# Build & packaging outputs
 *.egg-info/
 dist/
 build/
 *.egg
+packaging/dist_notices/
+.pytest_cache/
+.coverage
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
 # OS
 .DS_Store
 Thumbs.db
