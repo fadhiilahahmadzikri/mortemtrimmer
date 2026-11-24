@@ -15,6 +15,11 @@ import soundfile as sf
 from autosilenttrimmer.application.services.execution_planner import ExecutionPlanner
 from autosilenttrimmer.application.services.output_path_resolver import OutputPathResolver
 from autosilenttrimmer.application.services.worker_pool import ChunkWorkerPool
+from autosilenttrimmer.application.use_cases._job_events import (
+    publish_job_completed,
+    publish_job_failed,
+    publish_stage_transition,
+)
 from autosilenttrimmer.core.config import MediaProcessingConfig
 from autosilenttrimmer.core.constants import (
     MANIFEST_SUFFIX,
@@ -46,14 +51,7 @@ from autosilenttrimmer.domain.contracts.trim_strategy import ITrimStrategy
 from autosilenttrimmer.domain.contracts.visualizer import IVisualizer
 from autosilenttrimmer.domain.entities.job import Job, JobState
 from autosilenttrimmer.domain.models.compute import ComputePolicy
-from autosilenttrimmer.domain.models.events import (
-    JobCancelled,
-    JobCompleted,
-    JobFailed,
-    JobQueued,
-    JobStarted,
-    JobStateChanged,
-)
+from autosilenttrimmer.domain.models.events import JobCancelled, JobQueued
 from autosilenttrimmer.domain.models.media_probe import MediaProbeInfo
 from autosilenttrimmer.domain.models.processing_command import ProcessMediaCommand
 from autosilenttrimmer.domain.models.processing_result import ProcessingResult
@@ -160,6 +158,7 @@ class JobOrchestrator:
     def enqueue(self, commands: list[ProcessMediaCommand]) -> None:
         """Queue multiple commands atomically into single orchestrator stream."""
         for cmd in commands:
+            logger.info("Job queued (strategy=%s): %s", cmd.strategy, cmd.input_path)
             self._job_queue.put(cmd)
             self._bus.publish(JobQueued(job_id="pending", source_path=cmd.input_path))
 
@@ -209,7 +208,9 @@ class JobOrchestrator:
         t_start = time.monotonic()
 
         try:
-            self._bus.publish(JobStarted(job_id=job.job_id, source_path=job.source_path))
+            logger.info(
+                "Job %s started (strategy=%s): %s", job.job_id[:8], job.strategy, job.source_path
+            )
             probe = self._run_probe_stage(job, command)
             final_output = self._resolve_non_destructive_output(probe, command)
             job.output_path = final_output
@@ -292,20 +293,15 @@ class JobOrchestrator:
             reduction_pct = (
                 (silence_removed / probe.duration_sec) * 100.0 if probe.duration_sec > 0 else 0.0
             )
-            self._bus.publish(
-                JobCompleted(
-                    job_id=job.job_id,
-                    source_path=job.source_path,
-                    output_path=final_output,
-                    original_duration=probe.duration_sec,
-                    final_duration=expected_dur,
-                    reduction_percentage=reduction_pct,
-                )
+            publish_job_completed(
+                self._bus,
+                self._notifier,
+                job,
+                final_output,
+                probe.duration_sec,
+                expected_dur,
+                reduction_pct,
             )
-            if self._notifier:
-                self._notifier.notify_completed(
-                    final_output, probe.duration_sec, expected_dur, reduction_pct
-                )
             if self._manifest_repo:
                 self._manifest_repo.delete_job(job.job_id)
 
@@ -452,9 +448,7 @@ class JobOrchestrator:
         prev = job.state
         job.transition_to(target)
         self._persist(job)
-        self._bus.publish(
-            JobStateChanged(job_id=job.job_id, previous_state=prev.value, new_state=target.value)
-        )
+        publish_stage_transition(self._bus, job, prev, target)
 
     def _handle_terminal_error(
         self, job: Job, terminal: JobState, error_code: str, msg: str
@@ -468,16 +462,7 @@ class JobOrchestrator:
                 job.state = terminal
         self._persist(job)
         if terminal == JobState.FAILED:
-            self._bus.publish(
-                JobFailed(
-                    job_id=job.job_id,
-                    source_path=job.source_path,
-                    error_code=error_code,
-                    message=msg,
-                )
-            )
-            if self._notifier:
-                self._notifier.notify_failed(job.source_path, error_code, msg)
+            publish_job_failed(self._bus, self._notifier, job, error_code, msg)
 
     def _persist(self, job: Job) -> None:
         if self._manifest_repo:

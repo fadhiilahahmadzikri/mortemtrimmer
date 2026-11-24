@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import os
 import threading
 from collections.abc import Callable
 
@@ -16,6 +17,8 @@ from autosilenttrimmer.domain.models.events import (
     JobCancelled,
     JobCompleted,
     JobFailed,
+    JobQueued,
+    JobStarted,
     ProgressUpdated,
 )
 from autosilenttrimmer.presentation.tray.progress_popup import MinimalProgressPopup
@@ -50,6 +53,7 @@ class PystrayTrayUI(ITrayUI):
         self,
         *,
         on_open_tune: Callable[[], None],
+        on_open_logs: Callable[[], None],
         on_pause_toggle: Callable[[], None],
         on_cancel_current: Callable[[], None],
         on_export_diagnostics: Callable[[], str],
@@ -63,22 +67,49 @@ class PystrayTrayUI(ITrayUI):
             self._l10n,
             on_pause_toggle=on_pause_toggle,
             on_cancel=on_cancel_current,
+            on_open_logs=on_open_logs,
         )
         self._popup.start()
 
         def _on_event(event: DomainEvent) -> None:
-            if isinstance(event, ProgressUpdated):
+            if isinstance(event, JobQueued):
+                self._status_text = self._l10n.text(
+                    "tray.status_queued",
+                    filename=os.path.basename(event.source_path),
+                )
+            elif isinstance(event, JobStarted):
+                self._status_text = self._l10n.text(
+                    "tray.status_running",
+                    percent=1.0,
+                    filename=os.path.basename(event.source_path),
+                )
+            elif isinstance(event, ProgressUpdated):
                 self._status_text = self._l10n.text(
                     "tray.status_running",
                     percent=event.percent,
                     filename=event.filename,
                 )
-            elif isinstance(event, (JobCompleted, JobFailed, JobCancelled)):
+            elif isinstance(event, JobCompleted):
+                self._status_text = self._l10n.text(
+                    "tray.status_completed",
+                    filename=os.path.basename(event.output_path or event.source_path),
+                    reduction=event.reduction_percentage,
+                )
+            elif isinstance(event, JobFailed):
+                self._status_text = self._l10n.text(
+                    "tray.status_failed",
+                    filename=os.path.basename(event.source_path),
+                    error_code=event.error_code or "FAILED",
+                )
+            elif isinstance(event, JobCancelled):
                 self._status_text = self._l10n.text("tray.status_idle")
+
             if self._popup is not None:
                 self._popup.push_event(event)
             if self._icon is not None:
                 self._icon.title = self._status_text[:127]
+                with contextlib.suppress(Exception):
+                    self._icon.update_menu()
 
         self._bus.subscribe(DomainEvent, _on_event)
 
@@ -102,6 +133,10 @@ class PystrayTrayUI(ITrayUI):
                 lambda _item: self._l10n.text("tray.action_tune"),
                 lambda _icon, _item: on_open_tune(),
                 default=True,
+            ),
+            pystray.MenuItem(
+                lambda _item: self._l10n.text("tray.action_logs"),
+                lambda _icon, _item: on_open_logs(),
             ),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(

@@ -12,6 +12,7 @@ from autosilenttrimmer.core.exceptions import (
     NoiseReductionException,
 )
 from autosilenttrimmer.domain.contracts.noise_reduction import INoiseReductionStrategy
+from autosilenttrimmer.infrastructure.runtime.model_paths import resolve_offline_deepfilter_dir
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +44,19 @@ class DeepFilterNetStrategy(INoiseReductionStrategy):
             ) from e
 
         device = self._device or ("cuda" if torch.cuda.is_available() else "cpu")
-        logger.info("Initializing DeepFilterNet3 on %s...", device.upper())
+        offline_dir = resolve_offline_deepfilter_dir()
+        logger.info(
+            "Initializing DeepFilterNet3 on %s (model_base_dir=%s)...",
+            device.upper(),
+            offline_dir or "default-cache",
+        )
 
         with torch.inference_mode():
-            model, df_state, _ = init_df(config_allow_defaults=True)
+            model, df_state, _ = init_df(
+                model_base_dir=offline_dir,
+                config_allow_defaults=True,
+                log_file=None,
+            )
             model = model.to(device).eval()
 
             audio, _ = load_audio(input_path, sr=df_state.sr())

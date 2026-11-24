@@ -11,6 +11,7 @@ from autosilenttrimmer.core.constants import SUPPORTED_VAD_SAMPLE_RATES
 from autosilenttrimmer.core.exceptions import DependencyMissingException
 from autosilenttrimmer.domain.contracts.vad import IVoiceActivityDetector
 from autosilenttrimmer.domain.entities.segment import MediaSegment
+from autosilenttrimmer.infrastructure.runtime.model_paths import resolve_offline_silero_dir
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +38,23 @@ class SileroBasedVAD(IVoiceActivityDetector):
                 "PyTorch is required for Silero VAD. Run --setup-runtime to install AI Runtime Pack."
             ) from exc
 
-        logger.info("Loading Silero VAD neural model...")
-        model, utils = torch.hub.load(
-            repo_or_dir=self._config.silero_repo,
-            model=self._config.silero_model,
-            force_reload=False,
-            trust_repo=True,
-        )
+        offline_dir = resolve_offline_silero_dir()
+        if offline_dir is not None:
+            logger.info("Loading bundled offline Silero VAD model from: %s", offline_dir)
+            model, utils = torch.hub.load(
+                repo_or_dir=offline_dir,
+                model=self._config.silero_model,
+                source="local",
+                trust_repo=True,
+            )
+        else:
+            logger.info("Loading Silero VAD neural model...")
+            model, utils = torch.hub.load(
+                repo_or_dir=self._config.silero_repo,
+                model=self._config.silero_model,
+                force_reload=False,
+                trust_repo=True,
+            )
         get_speech_timestamps, _, read_audio, _, _ = utils
 
         logger.info("Reading acoustic wave data (%d Hz)...", sr_vad)

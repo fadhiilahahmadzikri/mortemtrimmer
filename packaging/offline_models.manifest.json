@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0",
+  "silero_tag": "v6.2",
+  "models": {
+    "silero": {
+      "relative_dir": "silero",
+      "files": {
+        "LICENSE": {
+          "sha256": "2e63e9a38b6e8fc0c7bc37ce174caca1862870856c6daf5697cfb785e925520b",
+          "size_bytes": 1075
+        },
+        "README.md": {
+          "sha256": "9700241a6930ca78cb0cfe9f82862cf63ca2d8152a5947e135d5b95747ddbecf",
+          "size_bytes": 7757
+        },
+        "hubconf.py": {
+          "sha256": "943f7d7147553d66adc01e95e1134c6b20f605665c04f693b5c826cb0aa34cbb",
+          "size_bytes": 1992
+        },
+        "pyproject.toml": {
+          "sha256": "6b80c0671a8ef504a9c6eb44f22fdd8a6985838e579e23ece4e1ed9c1081c061",
+          "size_bytes": 1319
+        },
+        "src/silero_vad/__init__.py": {
+          "sha256": "465b19fe1d48bc17e547df723d3278684b63882ba8ec75f988822b5dbfec925b",
+          "size_bytes": 436
+        },
+        "src/silero_vad/data/__init__.py": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        "src/silero_vad/data/silero_vad.jit": {
+          "sha256": "e1122837f4154c511485fe0b9c64455f7b929c96fbb8d79fbdb336383ebd3720",
+          "size_bytes": 2272526
+        },
+        "src/silero_vad/data/silero_vad.onnx": {
+          "sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
+          "size_bytes": 2327524
+        },
+        "src/silero_vad/data/silero_vad_16k_op15.onnx": {
+          "sha256": "7ed98ddbad84ccac4cd0aeb3099049280713df825c610a8ed34543318f1b2c49",
+          "size_bytes": 1289603
+        },
+        "src/silero_vad/data/silero_vad_half.onnx": {
+          "sha256": "1e0b195ad4806595ef4466f419d16fca7e4afcfc6669b8c0b5f76ea87547c769",
+          "size_bytes": 1280395
+        },
+        "src/silero_vad/model.py": {
+          "sha256": "9f332779f7609e70ff1e0bbeadb087ff24baa61d2ffa844266f3c9150a3ccd3d",
+          "size_bytes": 1147
+        },
+        "src/silero_vad/utils_vad.py": {
+          "sha256": "dbdcfc5cef2c14abf8cc29b44afb79038509a9bc34ae8ba2e7482b48813949ee",
+          "size_bytes": 25590
+        }
+      }
+    },
+    "deepfilter_DeepFilterNet3": {
+      "relative_dir": "deepfilter/DeepFilterNet3",
+      "files": {
+        "checkpoints/model_120.ckpt.best": {
+          "sha256": "23b92884f63ccf54bb026014604625ab231657b6480df65db4095c4c171e6003",
+          "size_bytes": 8714073
+        },
+        "config.ini": {
+          "sha256": "415eb925d44990d938fb739f514aa3662c1ec0ea836cff044fa1291b82cb4290",
+          "size_bytes": 2067
+        }
+      }
+    },
+    "whisper_tiny": {
+      "relative_dir": "whisper/tiny",
+      "files": {
+        "config.json": {
+          "sha256": "a73a28cdfe1c43ccc7202fa333d1f89c202477271407ae9a7f19afa52039cac8",
+          "size_bytes": 2249
+        },
+        "model.bin": {
+          "sha256": "dcb76c6586fc06cbdac6dd21f14cfd129cc4cdd9dce19bf4ffa62e59cbe6e6d1",
+          "size_bytes": 75538270
+        },
+        "tokenizer.json": {
+          "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab",
+          "size_bytes": 2203239
+        },
+        "vocabulary.txt": {
+          "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913",
+          "size_bytes": 459861
+        }
+      }
+    },
+    "whisper_base": {
+      "relative_dir": "whisper/base",
+      "files": {
+        "config.json": {
+          "sha256": "56a6d8110d311f19c8f0471e562832c7527f146b567275bfca59fcf7c184da9a",
+          "size_bytes": 2309
+        },
+        "model.bin": {
+          "sha256": "d01c3014881c9c6f3133c182f3d2887eb6ca1c789a7538c5c007196857a0a6a9",
+          "size_bytes": 145217532
+        },
+        "tokenizer.json": {
+          "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab",
+          "size_bytes": 2203239
+        },
+        "vocabulary.txt": {
+          "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913",
+          "size_bytes": 459861
+        }
+      }
+    }
+  }
+}

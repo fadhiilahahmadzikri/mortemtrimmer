@@ -1,0 +1,261 @@
+name: Windows CI/CD Release Pipeline
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  PYTHON_VERSION: "3.11.5"
+  UV_VERSION: "0.11.9"
+  INNO_SETUP_VERSION: "6.5.4"
+
+jobs:
+  lint:
+    name: Lint & Clean Architecture Gate
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pinned Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup pinned uv ${{ env.UV_VERSION }}
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Cache Python virtualenv
+        id: venv-cache
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('requirements.lock', 'pyproject.toml') }}
+
+      - name: Create virtualenv from locked requirements
+        if: steps.venv-cache.outputs.cache-hit != 'true'
+        run: |
+          uv venv --python ${{ env.PYTHON_VERSION }} .venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1 -Stage deps
+
+      - name: Sync editable package metadata
+        if: steps.venv-cache.outputs.cache-hit == 'true'
+        run: |
+          uv pip install --python .venv/Scripts/python.exe --no-deps -e .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Validate pre-commit config & run lint gate
+        run: |
+          .\.venv\Scripts\python.exe -m pre_commit validate-config
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1 -Stage lint
+
+  test:
+    name: Automated Tests & Coverage
+    needs: lint
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pinned Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup pinned uv ${{ env.UV_VERSION }}
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Restore Python virtualenv
+        id: venv-cache
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('requirements.lock', 'pyproject.toml') }}
+
+      - name: Install locked dependencies on cache miss
+        if: steps.venv-cache.outputs.cache-hit != 'true'
+        run: |
+          uv venv --python ${{ env.PYTHON_VERSION }} .venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1 -Stage deps
+
+      - name: Sync editable package metadata
+        if: steps.venv-cache.outputs.cache-hit == 'true'
+        run: |
+          uv pip install --python .venv/Scripts/python.exe --no-deps -e .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run fast and slow test suites with coverage gate
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1 -Stage test
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          if-no-files-found: ignore
+
+  build:
+    name: Build Full AI PyInstaller Bundle
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pinned Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup pinned uv ${{ env.UV_VERSION }}
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Restore Python virtualenv
+        id: venv-cache
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('requirements.lock', 'pyproject.toml') }}
+
+      - name: Install locked dependencies on cache miss
+        if: steps.venv-cache.outputs.cache-hit != 'true'
+        run: |
+          uv venv --python ${{ env.PYTHON_VERSION }} .venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1 -Stage deps
+
+      - name: Sync editable package metadata
+        if: steps.venv-cache.outputs.cache-hit == 'true'
+        run: |
+          uv pip install --python .venv/Scripts/python.exe --no-deps -e .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Cache verified offline AI models
+        uses: actions/cache@v4
+        with:
+          path: packaging/offline_models
+          key: offline-models-${{ hashFiles('packaging/offline_models.manifest.json') }}
+
+      - name: Stage offline AI weights (SHA-256 verified)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1 -Stage stage-models
+
+      - name: Build shim and Full AI PyInstaller bundle
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1 -Stage build
+
+      - name: Upload frozen bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frozen-bundle
+          retention-days: 5
+          compression-level: 1
+          path: |
+            dist/AutoSilentTrimmer/**
+            dist/trim-shim.exe
+            packaging/dist_notices/**
+
+  package:
+    name: Build Inno Setup Windows Installer
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pinned Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Download frozen bundle artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frozen-bundle
+
+      - name: Ensure Inno Setup ${{ env.INNO_SETUP_VERSION }}
+        run: |
+          $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+          if (-not $iscc -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+              choco install innosetup --version=${{ env.INNO_SETUP_VERSION }} -y --no-progress
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      - name: Package installer & verify <2GB limit
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1 -Stage package
+
+      - name: Upload Windows installer and SHA256
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          retention-days: 14
+          path: |
+            dist/installer/TrimThisVideo-Setup-*.exe
+            dist/installer/TrimThisVideo-Setup-*.exe.sha256
+
+  verify:
+    name: Clean-Room Frozen & Silent Install Smoke Test
+    needs: [build, package]
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pinned Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Download frozen bundle artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frozen-bundle
+
+      - name: Download Windows installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+
+      - name: Verify offline AI inference, silent install, and clean uninstall
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1 -Stage smoke
+
+  release:
+    name: Publish GitHub Release
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified Windows installer & checksum
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/installer
+
+      - name: Create GitHub Release with Installer & SHA256
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/installer/TrimThisVideo-Setup-*.exe
+            dist/installer/TrimThisVideo-Setup-*.exe.sha256

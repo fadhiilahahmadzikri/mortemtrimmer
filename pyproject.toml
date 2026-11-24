@@ -93,8 +93,33 @@ docstring-code-format = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra -q"
+markers = [
+  "unit: fast isolated unit tests without FFmpeg or OS-wide dependencies",
+  "integration: cross-component integration tests using IPC, HTTP, or FFmpeg",
+  "slow: multi-second media encode/decode or heavy real-sample tests",
+]
+
+[tool.coverage.run]
+source = ["autosilenttrimmer"]
+omit = [
+  "autosilenttrimmer/__main__.py",
+]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+skip_covered = false
 
 [tool.commitizen]
 name = "cz_conventional_commits"
+version = "1.0.0"
 tag_format = "v$version"
 version_scheme = "semver"
+version_provider = "pep621"
+update_changelog_on_bump = true
+annotated_tag = true
+version_files = [
+  "pyproject.toml:version",
+  "autosilenttrimmer/core/constants.py:APP_VERSION",
+  "packaging/windows/installer.iss:#define MyAppVersion",
+]

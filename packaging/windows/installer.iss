@@ -43,6 +43,7 @@ Source: "..\..\packaging\dist_notices\THIRD_PARTY_NOTICES.txt"; DestDir: "{app}"
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--daemon --tray"; AppUserModelID: "{#MyAppUserModelID}"
 Name: "{group}\Tune {#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--tune"
+Name: "{group}\View Logs - {#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--logs"
 Name: "{group}\System Readiness Check"; Filename: "{app}\autosilenttrimmer-cli.exe"; Parameters: "--check"
 Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--daemon --tray"; Tasks: autostart
 
@@ -53,6 +54,16 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "--register-shell"; Flags: runhid
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--unregister-shell"; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterShell"
 
 [Code]
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  Result := '';
+  // Stop headless tray/shim processes cleanly before file replacement (prevents CloseApplications lock prompt)
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM autosilenttrimmer.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM trim-shim.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   DataDir: String;

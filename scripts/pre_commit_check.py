@@ -5,13 +5,13 @@ from __future__ import annotations
 import os
 import py_compile
 import re
+import subprocess
 import sys
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-# Disallowed patterns in source code
 FORBIDDEN_PATTERNS = [
     (re.compile(r"[C|c]:\\Users\\"), "Hardcoded user directory path detected"),
     (re.compile(r"[C|c]:\\ProgramData\\"), "Hardcoded machine-specific absolute path detected"),
@@ -26,19 +26,17 @@ MAX_LINES_PER_FILE = 500
 
 
 def find_source_files(root_dir: str) -> list[str]:
-    """Find all tracked Python files in project, excluding virtual environments and cache."""
-    py_files: list[str] = []
-    for dirpath, dirnames, filenames in os.walk(root_dir):
-        # Exclude directories
-        dirnames[:] = [
-            d
-            for d in dirnames
-            if d not in {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".githooks"}
-        ]
-        for f in filenames:
-            if f.endswith(".py"):
-                py_files.append(os.path.join(dirpath, f))
-    return sorted(py_files)
+    """Return git-tracked Python files only (ignores untracked caches and generated artifacts)."""
+    out = subprocess.check_output(["git", "ls-files", "*.py"], cwd=root_dir, text=True)
+    files: list[str] = []
+    for rel in out.splitlines():
+        rel_clean = rel.strip()
+        if not rel_clean:
+            continue
+        full_path = os.path.join(root_dir, rel_clean)
+        if os.path.isfile(full_path):
+            files.append(os.path.abspath(full_path))
+    return sorted(files)
 
 
 def gate_syntax_compilation(files: list[str]) -> bool:
@@ -79,13 +77,11 @@ def gate_clean_code_hygiene(files: list[str]) -> bool:
         with open(path, encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
-        # Check hardcoded machine paths
         for pattern, msg in FORBIDDEN_PATTERNS:
             if pattern.search(content):
                 print(f"  [HYGIENE VIOLATION] {path}: {msg}")
                 has_error = True
 
-        # Check emojis
         if EMOJI_PATTERN.search(content):
             print(f"  [EMOJI DETECTED] {path}: Emojis are strictly prohibited in codebase.")
             has_error = True
@@ -132,7 +128,7 @@ def gate_system_readiness() -> bool:
 
 
 def main() -> int:
-    """Run Clean Architecture quality gates."""
+    """Run Clean Architecture quality gates on git-tracked files."""
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     files = find_source_files(root_dir)
 

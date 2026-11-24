@@ -183,3 +183,24 @@ def test_ffmpeg_manager_copy_mode_multi_segment_succeeds(golden_mp4: str, tmp_pa
     )
     assert os.path.isfile(out_mp4)
     assert os.path.getsize(out_mp4) > 0
+
+
+def test_ensure_initial_settings_selects_energy_without_torch_and_preserves_existing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import importlib.util
+
+    from autosilenttrimmer.presentation.cli.runtime_builder import ensure_initial_settings
+
+    settings_file = tmp_path / "settings.json"
+    repo = JsonSettingsRepository(str(settings_file))
+
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name: None)
+    lean = ensure_initial_settings(repo, str(settings_file))
+    assert lean.vad_engine == "energy"
+    assert settings_file.is_file()
+
+    # Once user saves an explicit preference, re-running must never overwrite it
+    repo.save(UserSettings(vad_engine="silero"))
+    preserved = ensure_initial_settings(repo, str(settings_file))
+    assert preserved.vad_engine == "silero"

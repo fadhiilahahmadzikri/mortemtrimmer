@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+import os
 import queue
 import threading
+import time
 from collections.abc import Callable
 
 from autosilenttrimmer.core.constants import TRAY_POLL_INTERVAL_SEC
@@ -14,6 +16,8 @@ from autosilenttrimmer.domain.models.events import (
     JobCancelled,
     JobCompleted,
     JobFailed,
+    JobQueued,
+    JobStarted,
     ProgressUpdated,
 )
 
@@ -40,10 +44,12 @@ class MinimalProgressPopup:
         *,
         on_pause_toggle: Callable[[], None],
         on_cancel: Callable[[], None],
+        on_open_logs: Callable[[], None] | None = None,
     ) -> None:
         self._l10n = localizer
         self._on_pause_toggle = on_pause_toggle
         self._on_cancel = on_cancel
+        self._on_open_logs = on_open_logs
         self._queue: queue.Queue[DomainEvent] = queue.Queue()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -84,7 +90,7 @@ class MinimalProgressPopup:
         root.attributes("-topmost", True)
         root.configure(bg="#1a1c23")
 
-        width, height = 340, 126
+        width, height = 390, 148
         scr_w = root.winfo_screenwidth()
         scr_h = root.winfo_screenheight()
         root.geometry(f"{width}x{height}+{scr_w - width - 20}+{scr_h - height - 60}")
@@ -111,7 +117,14 @@ class MinimalProgressPopup:
         title_lbl.pack(fill=tk.X)
 
         meta_lbl = tk.Label(
-            frame, text="", fg="#a0a8b8", bg="#1a1c23", font=("Segoe UI", 8), anchor="w"
+            frame,
+            text="",
+            fg="#a0a8b8",
+            bg="#1a1c23",
+            font=("Segoe UI", 8),
+            anchor="w",
+            justify=tk.LEFT,
+            wraplength=358,
         )
         meta_lbl.pack(fill=tk.X, pady=(2, 6))
 
@@ -126,10 +139,17 @@ class MinimalProgressPopup:
         )
         status_lbl.pack(side=tk.LEFT)
 
+        def _dismiss_or_cancel() -> None:
+            if error_hide_at[0] > 0.0:
+                error_hide_at[0] = 0.0
+                root.withdraw()
+            else:
+                self._on_cancel()
+
         cancel_btn = tk.Button(
             btn_row,
             text=self._l10n.text("popup.cancel"),
-            command=self._on_cancel,
+            command=_dismiss_or_cancel,
             bg="#3b2328",
             fg="#ff8a80",
             relief=tk.FLAT,
@@ -137,6 +157,19 @@ class MinimalProgressPopup:
             font=("Segoe UI", 8),
         )
         cancel_btn.pack(side=tk.RIGHT, padx=(6, 0))
+
+        logs_btn = tk.Button(
+            btn_row,
+            text=self._l10n.text("popup.logs"),
+            command=lambda: self._on_open_logs() if self._on_open_logs else None,
+            bg="#262b36",
+            fg="#90caf9",
+            relief=tk.FLAT,
+            padx=8,
+            font=("Segoe UI", 8),
+        )
+        if self._on_open_logs is not None:
+            logs_btn.pack(side=tk.RIGHT, padx=(6, 0))
 
         pause_btn = tk.Button(
             btn_row,
@@ -147,6 +180,8 @@ class MinimalProgressPopup:
             padx=8,
             font=("Segoe UI", 8),
         )
+
+        error_hide_at: list[float] = [0.0]
 
         def _toggle_pause() -> None:
             self._paused = not self._paused
@@ -162,22 +197,66 @@ class MinimalProgressPopup:
                 root.destroy()
                 return
 
+            if error_hide_at[0] > 0.0 and time.monotonic() >= error_hide_at[0]:
+                error_hide_at[0] = 0.0
+                root.withdraw()
+
             while not self._queue.empty():
                 ev = self._queue.get_nowait()
-                if isinstance(ev, ProgressUpdated):
+                if isinstance(ev, (JobQueued, JobStarted)):
+                    error_hide_at[0] = 0.0
                     root.deiconify()
-                    title_lbl.configure(text=ev.filename or self._l10n.text("popup.title"))
-                    eta_str = _format_eta(ev.eta_seconds)
+                    root.lift()
+                    title_lbl.configure(
+                        text=os.path.basename(ev.source_path) or self._l10n.text("popup.title")
+                    )
+                    stage = "QUEUED" if isinstance(ev, JobQueued) else "STARTING"
                     meta_lbl.configure(
-                        text=(
+                        text=self._l10n.text("popup.queued", stage=stage), fg="#a0a8b8"
+                    )
+                    bar["value"] = 2.0
+                    status_lbl.configure(text="2%", fg="#00e676")
+                    cancel_btn.configure(text=self._l10n.text("popup.cancel"))
+                elif isinstance(ev, ProgressUpdated):
+                    error_hide_at[0] = 0.0
+                    root.deiconify()
+                    root.lift()
+                    title_lbl.configure(text=ev.filename or self._l10n.text("popup.title"))
+                    if ev.eta_seconds is None:
+                        meta_text = self._l10n.text("popup.stage", stage=ev.backend_label)
+                    else:
+                        eta_str = _format_eta(ev.eta_seconds)
+                        meta_text = (
                             f"{self._l10n.text('popup.eta', eta=eta_str)}  |  "
                             f"{self._l10n.text('popup.backend', backend=ev.backend_label)}"
                         )
-                    )
+                    meta_lbl.configure(text=meta_text, fg="#a0a8b8")
                     bar["value"] = ev.percent
-                    status_lbl.configure(text=f"{ev.percent:.0f}%")
-                elif isinstance(ev, (JobCompleted, JobFailed, JobCancelled)):
+                    status_lbl.configure(text=f"{ev.percent:.0f}%", fg="#00e676")
+                    cancel_btn.configure(text=self._l10n.text("popup.cancel"))
+                elif isinstance(ev, JobFailed):
                     self._paused = False
+                    pause_btn.configure(text=self._l10n.text("popup.pause"))
+                    root.deiconify()
+                    root.lift()
+                    title_lbl.configure(
+                        text=os.path.basename(ev.source_path) or self._l10n.text("popup.title")
+                    )
+                    short_msg = (ev.message or "")[:120]
+                    meta_lbl.configure(
+                        text=self._l10n.text(
+                            "popup.failed",
+                            code=ev.error_code or "FAILED",
+                            message=short_msg,
+                        ),
+                        fg="#ff8a80",
+                    )
+                    status_lbl.configure(text="FAILED", fg="#ff5252")
+                    cancel_btn.configure(text=self._l10n.text("popup.dismiss"))
+                    error_hide_at[0] = time.monotonic() + 25.0
+                elif isinstance(ev, (JobCompleted, JobCancelled)):
+                    self._paused = False
+                    error_hide_at[0] = 0.0
                     pause_btn.configure(text=self._l10n.text("popup.pause"))
                     root.withdraw()
 

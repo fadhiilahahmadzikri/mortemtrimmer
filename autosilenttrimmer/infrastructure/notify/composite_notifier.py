@@ -51,12 +51,15 @@ class CompositeNotifier(INotifier):
                 self._tray.show_balloon(title, body)
 
     def notify_failed(self, source_path: str, error_code: str, message: str) -> None:
+        title = f"{self._l10n.text('notify.failed_title')} ({error_code})"
+        body = f"{os.path.basename(source_path)}: {message}"
         try:
             self._primary.notify_failed(source_path, error_code, message)
-        except Exception:
-            if self._tray is not None:
-                title = f"{self._l10n.text('notify.failed_title')} ({error_code})"
-                self._tray.show_balloon(title, f"{os.path.basename(source_path)}: {message}")
+        except Exception as exc:
+            logger.debug("Primary failure toast failed (%s); using tray balloon.", exc)
+        # Always surface tray balloon on job failure so unsigned desktop apps never fail silently
+        if self._tray is not None:
+            self._tray.show_balloon(title, body)
 
     def notify_info(self, title: str, message: str) -> None:
         try:

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
+import logging
+import os
 from dataclasses import dataclass, replace
 
 from autosilenttrimmer.core.config import MediaProcessingConfig
@@ -12,6 +15,7 @@ from autosilenttrimmer.domain.contracts.ffmpeg_locator import IFFmpegLocator
 from autosilenttrimmer.domain.contracts.media_manager import IMediaManager
 from autosilenttrimmer.domain.contracts.media_verifier import IMediaVerifier
 from autosilenttrimmer.domain.contracts.noise_reduction import INoiseReductionStrategy
+from autosilenttrimmer.domain.contracts.storage import ISettingsRepository
 from autosilenttrimmer.domain.contracts.trim_strategy import ITrimStrategy
 from autosilenttrimmer.domain.contracts.visualizer import IVisualizer
 from autosilenttrimmer.domain.models.settings import UserSettings
@@ -44,6 +48,23 @@ class RuntimeComponents:
     visualizer: IVisualizer | None
     notifier: CompositeNotifier
     priority_ctrl: IProcessPriorityController
+
+
+def ensure_initial_settings(
+    settings_repo: ISettingsRepository, settings_file_path: str
+) -> UserSettings:
+    """Persist explicit initial settings on first run so Lean Core uses available Energy VAD."""
+    if os.path.isfile(settings_file_path):
+        return settings_repo.load()
+    has_torch = importlib.util.find_spec("torch") is not None
+    initial = UserSettings() if has_torch else UserSettings(vad_engine="energy")
+    settings_repo.save(initial)
+    logging.getLogger("autosilenttrimmer").info(
+        "Initialized default settings.json (vad=%s, torch_installed=%s)",
+        initial.vad_engine,
+        has_torch,
+    )
+    return initial
 
 
 def merge_cli_overrides(base: UserSettings, parsed: argparse.Namespace) -> UserSettings:

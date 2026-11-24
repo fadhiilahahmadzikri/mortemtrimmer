@@ -16,6 +16,7 @@ build/
 packaging/dist_notices/
 .pytest_cache/
 .coverage
+coverage.xml
 
 # IDE
 .vscode/
@@ -42,6 +43,7 @@ desktop.ini
 samples/*.mp4
 samples/*.wav
 samples/results/
+packaging/offline_models/
 
 # Release notes (local only)
 RELEASE_NOTES.md

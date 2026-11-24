@@ -100,8 +100,10 @@ class DesktopNotifierAdapter(INotifier):
 
     def notify_failed(self, source_path: str, error_code: str, message: str) -> None:
         """Emit localized failure toast referencing stable ErrorCode."""
-        if not self._enabled or self._notifier is None:
+        if not self._enabled:
             return
+        if self._notifier is None:
+            raise RuntimeError("Native desktop notifier backend is unavailable.")
         title = f"{self._l10n.text('notify.failed_title')} ({error_code})"
         body = f"{os.path.basename(source_path)}: {message}"
 

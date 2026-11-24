@@ -46,6 +46,7 @@ from autosilenttrimmer.presentation.cli.parser import build_argument_parser
 from autosilenttrimmer.presentation.cli.readiness_presenter import ReadinessPresenter
 from autosilenttrimmer.presentation.cli.runtime_builder import (
     build_runtime_components,
+    ensure_initial_settings,
     merge_cli_overrides,
 )
 
@@ -53,15 +54,21 @@ logger = logging.getLogger("autosilenttrimmer")
 
 
 def configure_logging(log_dir: str | None = None) -> None:
-    """Configure minimal console and file logging."""
+    """Configure append-only file logging preserving all historical log entries."""
     warnings.filterwarnings("ignore")
     handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
     if log_dir:
         os.makedirs(log_dir, exist_ok=True)
-        handlers.append(logging.FileHandler(os.path.join(log_dir, "app.log"), encoding="utf-8"))
+        handlers.append(
+            logging.FileHandler(
+                os.path.join(log_dir, "app.log"),
+                mode="a",
+                encoding="utf-8",
+            )
+        )
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
+        format="%(asctime)s [%(levelname)s] [pid:%(process)d] %(message)s",
         handlers=handlers,
         force=True,
     )
@@ -103,7 +110,11 @@ def run_cli(args: list[str] | None = None) -> int:
     parsed = parser.parse_args(args)
 
     settings_repo = JsonSettingsRepository(paths.settings_file)
-    base_settings = settings_repo.load()
+    base_settings = (
+        settings_repo.load()
+        if parsed.check
+        else ensure_initial_settings(settings_repo, paths.settings_file)
+    )
     effective_settings = merge_cli_overrides(base_settings, parsed)
     active_lang = parsed.lang or effective_settings.language or detect_system_language()
     localizer = Localizer(active_lang)
@@ -156,6 +167,16 @@ def run_cli(args: list[str] | None = None) -> int:
                 gateway_client=LocalIPCClient(ipc_addr, ipc_fam),
                 shell_integration=shell_adapter,
                 shim_executable_path=_resolve_shim_executable(),
+            )
+
+        # 3b. Read-only PyQt6 System Logs & Activity Viewer (--logs)
+        if parsed.logs:
+            from autosilenttrimmer.presentation.logs.app_entry import run_logs_ui
+
+            return run_logs_ui(
+                log_file_path=os.path.join(paths.logs_dir, "app.log"),
+                gateway_client=LocalIPCClient(ipc_addr, ipc_fam),
+                on_open_tune=lambda: _spawn_detached(["--tune"]),
             )
 
         # 4. Runtime Pack Setup / Offline Install
@@ -251,6 +272,7 @@ def run_cli(args: list[str] | None = None) -> int:
                 return fresh
 
             def _on_batch(batch_paths: list[str]) -> None:
+                logger.info("IPC batch dispatched (%d file(s)): %s", len(batch_paths), batch_paths)
                 cur = _reload_daemon_settings()
                 cmds = [
                     ProcessMediaCommand(
@@ -288,6 +310,7 @@ def run_cli(args: list[str] | None = None) -> int:
                 comps.notifier.bind_tray(tray)
                 tray.start(
                     on_open_tune=lambda: _spawn_detached(["--tune"]),
+                    on_open_logs=lambda: _spawn_detached(["--logs"]),
                     on_pause_toggle=lambda: (
                         orchestrator.resume() if orchestrator.is_paused else orchestrator.pause()
                     ),
@@ -308,7 +331,9 @@ def run_cli(args: list[str] | None = None) -> int:
 
         # 9. Standard synchronous single-run execution (-i ... [-o ...])
         if not parsed.input:
-            parser.error("either --check, --tune, --daemon, --enqueue, or -i/--input is required")
+            parser.error(
+                "either --check, --tune, --logs, --daemon, --enqueue, or -i/--input is required"
+            )
 
         use_case = ProcessMediaUseCase(
             media_manager=comps.media_manager,

@@ -10,6 +10,7 @@ from autosilenttrimmer.core.config import VADConfig
 from autosilenttrimmer.core.exceptions import DependencyMissingException
 from autosilenttrimmer.domain.contracts.vad import IVoiceActivityDetector
 from autosilenttrimmer.domain.entities.segment import MediaSegment
+from autosilenttrimmer.infrastructure.runtime.model_paths import resolve_offline_whisper_dir
 
 logger = logging.getLogger(__name__)
 
@@ -35,17 +36,33 @@ class WhisperBasedVAD(IVoiceActivityDetector):
         device = self._device or ("cuda" if torch.cuda.is_available() else "cpu")
         compute_type = "float16" if device == "cuda" else "int8"
 
-        logger.info(
-            "Loading Whisper model (%s on %s, compute: %s)...",
-            self._config.whisper_model_size,
-            device.upper(),
-            compute_type,
-        )
-        model = WhisperModel(
-            self._config.whisper_model_size,
-            device=device,
-            compute_type=compute_type,
-        )
+        offline_dir = resolve_offline_whisper_dir(self._config.whisper_model_size)
+        if offline_dir is not None:
+            logger.info(
+                "Loading bundled offline Whisper model (%s -> %s on %s, compute: %s)...",
+                self._config.whisper_model_size,
+                offline_dir,
+                device.upper(),
+                compute_type,
+            )
+            model = WhisperModel(
+                offline_dir,
+                device=device,
+                compute_type=compute_type,
+                local_files_only=True,
+            )
+        else:
+            logger.info(
+                "Loading Whisper model (%s on %s, compute: %s)...",
+                self._config.whisper_model_size,
+                device.upper(),
+                compute_type,
+            )
+            model = WhisperModel(
+                self._config.whisper_model_size,
+                device=device,
+                compute_type=compute_type,
+            )
 
         logger.info(
             "Transcribing audio for semantic timestamps (language: %s)...",

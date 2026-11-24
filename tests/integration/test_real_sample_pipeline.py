@@ -28,6 +28,8 @@ from autosilenttrimmer.presentation.cli.runtime_builder import build_runtime_com
 
 REAL_SAMPLE = Path(__file__).resolve().parents[2] / "samples" / "real_sample_1m.mp4"
 
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
 requires_real_sample = pytest.mark.skipif(
     not REAL_SAMPLE.is_file(),
     reason="Real 1-minute sample video not present at samples/real_sample_1m.mp4",

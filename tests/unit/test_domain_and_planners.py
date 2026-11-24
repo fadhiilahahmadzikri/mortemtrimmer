@@ -192,3 +192,13 @@ def test_silero_vad_rejects_unsupported_sample_rate() -> None:
     vad = SileroBasedVAD(VADConfig(sample_rate_vad=48000))
     with pytest.raises(ValueError, match="Silero VAD supports only sample rates"):
         vad.get_keep_segments("unused.wav")
+
+
+def test_pyav_prober_extracts_indexed_keyframes_fast(golden_mp4: str) -> None:
+    from autosilenttrimmer.infrastructure.media.pyav_prober import PyAVMediaProber
+
+    info = PyAVMediaProber().probe(golden_mp4)
+    assert info.is_video
+    assert info.is_seekable
+    assert len(info.keyframe_timestamps) >= 2
+    assert info.keyframe_timestamps[0] == pytest.approx(0.0, abs=0.1)

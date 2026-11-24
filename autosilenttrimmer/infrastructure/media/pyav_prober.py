@@ -73,14 +73,11 @@ class PyAVMediaProber(IMediaProber):
                     elif stream.type == "subtitle":
                         s_streams.append(summary)
 
-                keyframes: list[float] = []
-                if v_streams:
-                    primary_video = container.streams.video[0]
-                    if primary_video.time_base is not None:
-                        time_base = float(primary_video.time_base)
-                        for packet in container.demux(primary_video):
-                            if packet.is_keyframe and packet.pts is not None:
-                                keyframes.append(round(float(packet.pts) * time_base, 6))
+                keyframes = (
+                    self._extract_keyframes(container, container.streams.video[0])
+                    if v_streams
+                    else []
+                )
 
                 if duration_sec <= 0.0 and a_streams:
                     # Fallback compute duration from audio stream metadata
@@ -107,3 +104,26 @@ class PyAVMediaProber(IMediaProber):
                 )
         except av.AVError as exc:
             raise FormatMismatchException(f"Container or codec could not be opened: {exc}") from exc
+
+    @staticmethod
+    def _extract_keyframes(container: object, primary_video: object) -> list[float]:
+        """Extract keyframe timestamps via O(1) index table when available, else demux packets."""
+        tb = getattr(primary_video, "time_base", None)
+        if tb is None:
+            return []
+        time_base = float(tb)
+        start_pts = getattr(primary_video, "start_time", None) or 0
+        index_entries = getattr(primary_video, "index_entries", None)
+        if index_entries:
+            indexed = [
+                round(max(0.0, float(entry.timestamp - start_pts) * time_base), 6)
+                for entry in index_entries
+                if entry.is_keyframe
+            ]
+            if indexed:
+                return indexed
+        return [
+            round(float(packet.pts) * time_base, 6)
+            for packet in container.demux(primary_video)  # type: ignore[attr-defined]
+            if packet.is_keyframe and packet.pts is not None
+        ]

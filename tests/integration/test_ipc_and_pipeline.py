@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import pytest
 from autosilenttrimmer.application.use_cases.process_media import ProcessMediaUseCase
 from autosilenttrimmer.core.config import MediaProcessingConfig, VADConfig
 from autosilenttrimmer.domain.contracts.compute import IComputeBackend
@@ -32,6 +33,7 @@ from autosilenttrimmer.infrastructure.runtime.pack_manager import (
 from autosilenttrimmer.infrastructure.vad.energy import EnergyBasedVAD
 
 
+@pytest.mark.integration
 def test_spike_s1_ipc_multiselect_coalescing(tmp_path: Path) -> None:
     """Spike S1: concurrent shell clients coalesce into one ordered batch cleanly."""
     if os.name == "nt":
@@ -69,6 +71,8 @@ def test_spike_s1_ipc_multiselect_coalescing(tmp_path: Path) -> None:
         gateway.stop()
 
 
+@pytest.mark.integration
+@pytest.mark.slow
 def test_spike_s2_golden_mp4_non_destructive_and_verified(golden_mp4: str, tmp_path: Path) -> None:
     """Spike S2: trim MP4 end-to-end, verify original untouched, output passes PyAVMediaVerifier."""
     src_sha_before = compute_sha256(golden_mp4)
@@ -108,6 +112,8 @@ def test_spike_s2_golden_mp4_non_destructive_and_verified(golden_mp4: str, tmp_p
     assert vreport.decode_samples_checked >= 2
 
 
+@pytest.mark.integration
+@pytest.mark.slow
 def test_spike_s2_golden_wav_audio_pipeline(golden_wav: str, tmp_path: Path) -> None:
     """Verify audio-only pipeline runs cleanly with automatic output naming & PyAV verification."""
     ffmpeg_path = ManagedFFmpegLocator().locate()
@@ -125,6 +131,7 @@ def test_spike_s2_golden_wav_audio_pipeline(golden_wav: str, tmp_path: Path) -> 
     assert result.final_duration < result.original_duration
 
 
+@pytest.mark.integration
 def test_spike_s6_http_range_resumable_runtime_download(tmp_path: Path) -> None:
     """Spike S6: resumable partial download + SHA-256 verification + atomic installation."""
     serve_dir = tmp_path / "cdn"
@@ -227,6 +234,8 @@ class _BrokenGPUBackend(IComputeBackend):
         )
 
 
+@pytest.mark.integration
+@pytest.mark.slow
 def test_spike_s3_gpu_fallback_to_cpu_under_policy_g2(golden_mp4: str) -> None:
     """Spike S3: forced GPU chunk error emits BackendFallback and recovers on CPU."""
     ffmpeg_path = ManagedFFmpegLocator().locate()

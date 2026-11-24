@@ -23,6 +23,11 @@ def build_argument_parser() -> argparse.ArgumentParser:
         help="Open the PyQt6 Tune configuration interface",
     )
     parser.add_argument(
+        "--logs",
+        action="store_true",
+        help="Open the read-only PyQt6 System Logs & Activity viewer",
+    )
+    parser.add_argument(
         "-i",
         "--input",
         required=False,
