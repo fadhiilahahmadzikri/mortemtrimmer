@@ -95,7 +95,8 @@ function Invoke-StageDeps {
     $uvCmd = Get-Command uv -ErrorAction SilentlyContinue
     if ($uvCmd) {
         Invoke-Checked "Install locked dependencies (uv)" $uvCmd.Source @(
-            "pip", "install", "--python", $Py, "--require-hashes", "-r", $lockFile
+            "pip", "install", "--python", $Py, "--index-strategy", "unsafe-best-match",
+            "--require-hashes", "-r", $lockFile
         )
         Invoke-Checked "Install package editable without extra resolution" $uvCmd.Source @(
             "pip", "install", "--python", $Py, "--no-deps", "-e", $RepoRoot
