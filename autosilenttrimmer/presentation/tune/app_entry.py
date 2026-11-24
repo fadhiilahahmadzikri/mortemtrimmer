@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Single-instance Qt application launcher for the Tune configuration UI."""
 
 from __future__ import annotations

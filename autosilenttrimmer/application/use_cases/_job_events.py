@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Lifecycle logging and early progress-event helpers for JobOrchestrator."""
 
 from __future__ import annotations

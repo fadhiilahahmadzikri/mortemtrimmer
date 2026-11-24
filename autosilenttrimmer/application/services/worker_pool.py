@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Adaptive parallel chunk Worker Pool with per-chunk retry and G2 GPU->CPU fallback."""
 
 from __future__ import annotations

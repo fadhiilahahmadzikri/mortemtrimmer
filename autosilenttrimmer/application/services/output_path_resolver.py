@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Non-destructive output path resolution and atomic file promotion."""
 
 from __future__ import annotations

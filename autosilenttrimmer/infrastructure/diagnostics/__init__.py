@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Diagnostics infrastructure implementations."""
 
 from autosilenttrimmer.infrastructure.diagnostics.engines import EngineDiagnostic

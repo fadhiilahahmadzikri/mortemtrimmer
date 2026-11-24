@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """FFmpeg media subsystem diagnostics."""
 
 from __future__ import annotations

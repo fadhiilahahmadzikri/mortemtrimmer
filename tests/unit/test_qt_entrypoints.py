@@ -175,6 +175,7 @@ def test_run_cli_check_readiness_hermetic(
     """Verify --check CLI readiness entrypoint runs cleanly into isolated app data."""
     local_dir = tmp_path / "local"
     local_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("AUTOSILENTTRIMMER_DATA_DIR", str(local_dir / "autosilenttrimmer"))
     monkeypatch.setenv("LOCALAPPDATA", str(local_dir))
     monkeypatch.setenv("XDG_DATA_HOME", str(local_dir))
 

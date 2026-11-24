@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Anonymized diagnostics bundle export use case (Doc 01 §10, Doc 02 §5.10)."""
 
 from __future__ import annotations

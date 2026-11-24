@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Domain models and data structures for system readiness assessment."""
 
 from __future__ import annotations

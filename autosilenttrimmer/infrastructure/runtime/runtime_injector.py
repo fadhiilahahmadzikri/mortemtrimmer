@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Runtime Pack Python path and native DLL directory activation helper."""
 
 from __future__ import annotations

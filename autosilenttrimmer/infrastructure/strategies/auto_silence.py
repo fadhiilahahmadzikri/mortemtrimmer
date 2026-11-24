@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Auto-silence trim strategy delegating voice detection to IVoiceActivityDetector."""
 
 from __future__ import annotations

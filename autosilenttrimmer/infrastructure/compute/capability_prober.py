@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Cross-platform host capability prober with driver-fingerprint caching."""
 
 from __future__ import annotations

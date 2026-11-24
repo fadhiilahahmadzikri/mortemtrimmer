@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Runtime pack setup, manifest fetch, verification, and rollback use case."""
 
 from __future__ import annotations

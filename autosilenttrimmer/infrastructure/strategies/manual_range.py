@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Manual time-range trim strategy supporting fast keyframe copy or frame-accurate cut."""
 
 from __future__ import annotations

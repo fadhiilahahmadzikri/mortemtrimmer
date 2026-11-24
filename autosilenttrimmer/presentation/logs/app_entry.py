@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Single-instance Qt launcher for the read-only System Logs & Activity viewer."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Cross-platform directory resolution powered by platformdirs."""
 
 from __future__ import annotations
@@ -23,7 +25,8 @@ class PlatformDirsPaths(IPlatformPaths):
     """OS-agnostic application storage directories (AppData / Application Support / XDG)."""
 
     def __init__(self, app_name: str = APP_SLUG, root_override: str | None = None) -> None:
-        self._root_override = os.path.abspath(root_override) if root_override else None
+        env_override = root_override or os.environ.get("AUTOSILENTTRIMMER_DATA_DIR")
+        self._root_override = os.path.abspath(env_override) if env_override else None
         self._dirs = PlatformDirs(appname=app_name, appauthor=False)
 
     @property

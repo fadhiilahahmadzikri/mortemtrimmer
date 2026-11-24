@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Media probing, execution planning, and chunk planning models."""
 
 from __future__ import annotations

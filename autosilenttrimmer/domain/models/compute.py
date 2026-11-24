@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Compute backend, platform architecture, and capability domain models."""
 
 from __future__ import annotations

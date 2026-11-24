@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Single-instance IPC gateway contract (Doc 01 §5, §9 Multi-Select)."""
 
 from __future__ import annotations

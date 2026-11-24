@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Platform-agnostic directory resolution and long-path helper contract."""
 
 from __future__ import annotations

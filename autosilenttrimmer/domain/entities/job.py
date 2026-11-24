@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Job aggregate entity, finite state machine, and chunk progress tracking."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Execution mode and adaptive worker concurrency planner (Doc 01 §7.1, §7.4)."""
 
 from __future__ import annotations

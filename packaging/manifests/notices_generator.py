@@ -9,6 +9,38 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT_DIR = os.path.join(PROJECT_ROOT, "packaging", "dist_notices")
 
+BUNDLED_ATTRIBUTION_SECTION = """
+================================================================================
+BUNDLED ASSETS, PRETRAINED MODELS, AND EXTERNAL TOOLS
+================================================================================
+The components below are third-party open-source dependencies, pretrained
+weights, iconography, or binaries bundled separately from Mortem Primer's own
+source copyright. Their respective licenses and notices apply intact:
+
+- GitHub Octicons (`mark-github` SVG icon)
+  License   : MIT License
+  Copyright : Copyright (c) GitHub Inc.
+  Source    : https://github.com/primer/octicons
+
+- Silero VAD (`snakers4/silero-vad`, v6.2)
+  License   : MIT License
+  Copyright : Copyright (c) Silero Team
+  Source    : https://github.com/snakers4/silero-vad
+
+- Faster-Whisper / OpenAI Whisper (`tiny`, `base`)
+  License   : MIT License
+  Source    : https://github.com/SYSTRAN/faster-whisper
+
+- DeepFilterNet3 (`DeepFilterNet`)
+  License   : MIT License / Apache License 2.0
+  Copyright : Copyright (c) Hendrik Schroeter and contributors
+  Source    : https://github.com/Rikorose/DeepFilterNet
+
+- FFmpeg (`imageio-ffmpeg`)
+  License   : LGPL / GPL according to distributed FFmpeg build configuration
+  Source    : https://ffmpeg.org/
+"""
+
 
 def generate_notices(out_dir: str = OUT_DIR) -> tuple[str, str]:
     """Emit human-readable THIRD_PARTY_NOTICES.txt and machine-readable sbom.json."""
@@ -29,6 +61,9 @@ def generate_notices(out_dir: str = OUT_DIR) -> tuple[str, str]:
         ],
         check=True,
     )
+    with open(notices_path, "a", encoding="utf-8") as f:
+        f.write(BUNDLED_ATTRIBUTION_SECTION)
+
     subprocess.run(
         [
             sys.executable,

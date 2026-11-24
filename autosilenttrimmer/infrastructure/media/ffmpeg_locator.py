@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """FFmpeg locator checking explicit path, managed Runtime Pack, imageio-ffmpeg, and PATH."""
 
 from __future__ import annotations

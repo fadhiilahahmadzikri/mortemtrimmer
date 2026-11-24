@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Declarative Single Source of Truth schema describing all tunable application parameters."""
 
 from __future__ import annotations

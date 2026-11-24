@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Bilingual localization resolver (EN / ID)."""
 
 from __future__ import annotations

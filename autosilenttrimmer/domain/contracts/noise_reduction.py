@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Noise reduction strategy contract."""
 
 from abc import ABC, abstractmethod

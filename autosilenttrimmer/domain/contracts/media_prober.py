@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Media prober contract for container, codec, keyframe, and VFR inspection."""
 
 from __future__ import annotations

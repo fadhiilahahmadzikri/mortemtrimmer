@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Runtime pack, installer artifact, and signed release manifest models."""
 
 from __future__ import annotations

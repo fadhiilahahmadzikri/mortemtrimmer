@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Platform architecture, runtime packs, and shell readiness diagnostics."""
 
 from __future__ import annotations

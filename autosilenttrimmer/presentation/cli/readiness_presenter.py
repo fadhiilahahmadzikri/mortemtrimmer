@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Terminal formatter for SystemReadinessReport."""
 
 from __future__ import annotations

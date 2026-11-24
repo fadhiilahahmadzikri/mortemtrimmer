@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Native desktop notification contract with action callbacks and DND fallback."""
 
 from __future__ import annotations

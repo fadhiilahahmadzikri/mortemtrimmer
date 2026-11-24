@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Shared PyQt6 theme and single-instance QLocalServer launcher helpers."""
 
 from __future__ import annotations

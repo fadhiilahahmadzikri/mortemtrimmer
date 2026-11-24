@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Minimal PyQt6 tabbed settings inspector for Mortem Primer."""
 
 from __future__ import annotations
@@ -32,6 +34,11 @@ from autosilenttrimmer.domain.contracts.ipc import IJobGatewayClient
 from autosilenttrimmer.domain.contracts.shell_integration import IShellIntegration
 from autosilenttrimmer.domain.contracts.storage import ISettingsRepository
 from autosilenttrimmer.domain.models.settings import UserSettings
+from autosilenttrimmer.presentation.about_dialog import (
+    GitHubCornerButton,
+    create_attribution_label,
+    install_help_menu,
+)
 from autosilenttrimmer.presentation.theme import STATUS_OK, STATUS_WARN, resolve_asset_path
 from autosilenttrimmer.presentation.tune.field_factory import (
     BoundFieldControl,
@@ -74,9 +81,10 @@ class TuneWindow(QMainWindow):
         self._dirty = False
 
         self.setWindowTitle(f"Settings — {APP_NAME}")
-        self.resize(820, 640)
+        self.resize(820, 650)
         self.setMinimumSize(720, 520)
 
+        install_help_menu(self)
         self._build_ui()
         self._load_into_widgets(self._repo.load())
 
@@ -85,7 +93,7 @@ class TuneWindow(QMainWindow):
         central.setObjectName("centralRoot")
         self.setCentralWidget(central)
         root_layout = QVBoxLayout(central)
-        root_layout.setContentsMargins(18, 16, 18, 16)
+        root_layout.setContentsMargins(18, 14, 18, 16)
         root_layout.setSpacing(12)
 
         # Header
@@ -104,13 +112,22 @@ class TuneWindow(QMainWindow):
             )
             header_row.addWidget(emblem)
 
+        title_col = QVBoxLayout()
+        title_col.setSpacing(0)
         title_lbl = QLabel(f"{APP_NAME} Settings", self)
         title_lbl.setObjectName("headerTitle")
+        self._attribution_lbl = create_attribution_label(self)
+        title_col.addWidget(title_lbl)
+        title_col.addWidget(self._attribution_lbl)
+
         self._status_lbl = QLabel("Synchronized", self)
         self._status_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        header_row.addWidget(title_lbl)
+        self._github_btn = GitHubCornerButton(self)
+
+        header_row.addLayout(title_col)
         header_row.addStretch(1)
         header_row.addWidget(self._status_lbl)
+        header_row.addWidget(self._github_btn)
         root_layout.addLayout(header_row)
 
         # Tab container

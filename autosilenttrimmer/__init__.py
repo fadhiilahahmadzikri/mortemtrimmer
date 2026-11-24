@@ -1,3 +1,7 @@
-"""AutoSilentTrimmer: AI-Powered Silence Remover and Noise Reduction Pipeline."""
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
+"""Mortem Primer: AI-Powered Silence Remover and Noise Reduction Pipeline."""
 
-__version__ = "1.0.0"
+from autosilenttrimmer.branding import APP_VERSION
+
+__version__ = APP_VERSION

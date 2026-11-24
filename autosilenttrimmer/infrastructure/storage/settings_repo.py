@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Atomic JSON repository for persistent UserSettings."""
 
 from __future__ import annotations

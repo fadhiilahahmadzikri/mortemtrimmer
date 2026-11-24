@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Hardware, OS, and GPU acceleration diagnostics."""
 
 from __future__ import annotations

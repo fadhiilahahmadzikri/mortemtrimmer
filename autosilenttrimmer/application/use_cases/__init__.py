@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Use cases module."""
 
 from autosilenttrimmer.application.use_cases.process_media import ProcessMediaUseCase

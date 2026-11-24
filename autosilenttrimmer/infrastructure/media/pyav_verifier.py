@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Output integrity verifier checking duration, streams, and multi-point decodability."""
 
 from __future__ import annotations

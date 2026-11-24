@@ -1,14 +1,22 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """CLI argument parser configuration."""
 
 from __future__ import annotations
 
 import argparse
 
+from autosilenttrimmer.branding import APP_DESCRIPTION, APP_NAME
+
 
 def build_argument_parser() -> argparse.ArgumentParser:
     """Construct CLI argument parser; omitted tuning flags inherit persisted settings.json."""
-    parser = argparse.ArgumentParser(
-        description="AutoSilentTrimmer: AI-Powered Silence Remover & Noise Reduction Production Suite"
+    parser = argparse.ArgumentParser(description=f"{APP_NAME}: {APP_DESCRIPTION}")
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="store_true",
+        help="Print application version, author, copyright notice, and GitHub URL and exit",
     )
     parser.add_argument(
         "--check",
@@ -20,12 +28,17 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--tune",
         action="store_true",
-        help="Open the PyQt6 Tune configuration interface",
+        help="Open the PyQt6 Settings configuration interface",
     )
     parser.add_argument(
         "--logs",
         action="store_true",
         help="Open the read-only PyQt6 System Logs & Activity viewer",
+    )
+    parser.add_argument(
+        "--about",
+        action="store_true",
+        help="Open the PyQt6 About Mortem Primer dialog",
     )
     parser.add_argument(
         "-i",

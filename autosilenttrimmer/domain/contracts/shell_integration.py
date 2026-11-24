@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """OS Explorer/Finder/File-Manager shell context menu integration contract."""
 
 from __future__ import annotations

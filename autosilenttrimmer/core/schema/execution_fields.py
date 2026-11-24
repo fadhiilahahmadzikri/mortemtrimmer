@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Encoder, chunk planner, output policy, and runtime schema field definitions."""
 
 from __future__ import annotations

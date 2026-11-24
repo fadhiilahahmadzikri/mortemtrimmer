@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Background Job Orchestrator owning state machine, merge, verify, and notify."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """MediaSegment value object representing an audio/video time slice."""
 
 from __future__ import annotations

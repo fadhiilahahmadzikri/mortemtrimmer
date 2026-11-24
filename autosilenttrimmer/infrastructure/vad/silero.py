@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Silero neural acoustic Voice Activity Detection."""
 
 from __future__ import annotations

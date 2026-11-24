@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Matplotlib and Seaborn timeline visualization."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Shared composition builder resolving UserSettings + CLI overrides into pipeline actors."""
 
 from __future__ import annotations

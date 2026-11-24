@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Policy-driven compute backend selector (G1 / G2 / G3)."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Composite notifier falling back from OS toast to tray balloon if DND blocks."""
 
 from __future__ import annotations

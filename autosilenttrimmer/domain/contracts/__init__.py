@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Domain contracts and interfaces (abstract base classes)."""
 
 from autosilenttrimmer.domain.contracts.diagnostic import ISystemDiagnostic

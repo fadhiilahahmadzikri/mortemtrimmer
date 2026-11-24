@@ -85,7 +85,7 @@ def clean_installed_app(
         uninstaller_ran = True
         if not dry_run:
             subprocess.run(
-                [str(unins_exe), "/VERYSILENT", "/NORESTART"],
+                [str(unins_exe), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"],
                 check=False,
                 capture_output=True,
                 timeout=30,

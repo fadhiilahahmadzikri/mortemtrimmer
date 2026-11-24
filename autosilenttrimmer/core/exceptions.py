@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Canonical error taxonomy and domain exception hierarchy."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Media verifier contract validating output integrity prior to atomic publish."""
 
 from __future__ import annotations

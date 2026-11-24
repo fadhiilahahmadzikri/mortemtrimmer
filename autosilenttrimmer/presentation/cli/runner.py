@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """CLI runner, composition root, IPC dispatch, Tune launcher, and daemon lifecycle controller."""
 
 from __future__ import annotations
@@ -14,6 +16,13 @@ from autosilenttrimmer.application.use_cases.job_orchestrator import JobOrchestr
 from autosilenttrimmer.application.use_cases.manage_runtime import ManageRuntimeUseCase
 from autosilenttrimmer.application.use_cases.process_media import ProcessMediaUseCase
 from autosilenttrimmer.application.use_cases.system_readiness import SystemReadinessUseCase
+from autosilenttrimmer.branding import (
+    APP_NAME,
+    APP_VERSION,
+    AUTHOR,
+    COPYRIGHT_NOTICE,
+    GITHUB_URL,
+)
 from autosilenttrimmer.core.constants import (
     SHELL_CONTEXT_MENU_LABEL,
     TIER1_VIDEO_EXTENSIONS,
@@ -104,14 +113,23 @@ def _spawn_detached(cli_flags: list[str]) -> None:
     subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kwargs)  # type: ignore[arg-type]
 
 
+def format_version_banner() -> str:
+    """Format canonical CLI --version output from branding metadata."""
+    return f"{APP_NAME} {APP_VERSION}\n{COPYRIGHT_NOTICE}\nAuthor: {AUTHOR}\nGitHub: {GITHUB_URL}"
+
+
 def run_cli(args: list[str] | None = None) -> int:
     """Run CLI entrypoint handling Tune, readiness, setup, shell integration, IPC, daemon, or job."""
+    parser = build_argument_parser()
+    parsed = parser.parse_args(args)
+
+    if parsed.version:
+        print(format_version_banner())
+        return 0
+
     paths = PlatformDirsPaths()
     paths.ensure_all_dirs()
     configure_logging(paths.logs_dir)
-
-    parser = build_argument_parser()
-    parsed = parser.parse_args(args)
 
     settings_repo = JsonSettingsRepository(paths.settings_file)
     base_settings = (
@@ -184,6 +202,12 @@ def run_cli(args: list[str] | None = None) -> int:
                 gateway_client=LocalIPCClient(ipc_addr, ipc_fam),
                 on_open_tune=lambda: _spawn_detached(["--tune"]),
             )
+
+        # 3c. About Mortem Primer Dialog (--about)
+        if parsed.about:
+            from autosilenttrimmer.presentation.about_entry import run_about_ui
+
+            return run_about_ui()
 
         # 4. Runtime Pack Setup / Offline Install
         if parsed.setup_runtime:
@@ -326,6 +350,7 @@ def run_cli(args: list[str] | None = None) -> int:
                     ).execute(),
                     on_toggle_language=localizer.toggle_language,
                     on_quit=_quit_daemon,
+                    on_open_about=lambda: _spawn_detached(["--about"]),
                 )
 
             try:

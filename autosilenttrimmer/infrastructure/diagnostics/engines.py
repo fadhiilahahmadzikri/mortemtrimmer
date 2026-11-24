@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Core audio, AI models, and C++/DLL integrity diagnostics."""
 
 from __future__ import annotations

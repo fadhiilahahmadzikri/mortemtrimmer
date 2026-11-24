@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Strict read-only PyQt6 system log & activity viewer retaining full log history."""
 
 from __future__ import annotations
@@ -25,6 +27,11 @@ from PyQt6.QtWidgets import (
 
 from autosilenttrimmer.core.constants import APP_NAME
 from autosilenttrimmer.domain.contracts.ipc import IJobGatewayClient
+from autosilenttrimmer.presentation.about_dialog import (
+    GitHubCornerButton,
+    create_attribution_label,
+    install_help_menu,
+)
 from autosilenttrimmer.presentation.theme import (
     STATUS_ERROR_BG,
     STATUS_ERROR_TEXT,
@@ -99,9 +106,10 @@ class LogViewerWindow(QMainWindow):
         self._all_lines: list[str] = []
 
         self.setWindowTitle(f"System Logs — {APP_NAME}")
-        self.resize(940, 620)
+        self.resize(940, 630)
         self.setMinimumSize(700, 440)
 
+        install_help_menu(self)
         self._build_ui()
         self.refresh_logs(force=True)
 
@@ -115,7 +123,7 @@ class LogViewerWindow(QMainWindow):
         central.setObjectName("centralRoot")
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
-        root.setContentsMargins(18, 16, 18, 16)
+        root.setContentsMargins(18, 14, 18, 16)
         root.setSpacing(10)
 
         # Header & Daemon/Error summary
@@ -134,13 +142,22 @@ class LogViewerWindow(QMainWindow):
             )
             top_row.addWidget(emblem)
 
+        title_col = QVBoxLayout()
+        title_col.setSpacing(0)
         title_lbl = QLabel(f"{APP_NAME} System Logs", self)
         title_lbl.setObjectName("headerTitle")
+        self._attribution_lbl = create_attribution_label(self)
+        title_col.addWidget(title_lbl)
+        title_col.addWidget(self._attribution_lbl)
+
         self._daemon_lbl = QLabel("Background Service: Checking...", self)
         self._daemon_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        top_row.addWidget(title_lbl)
+        self._github_btn = GitHubCornerButton(self)
+
+        top_row.addLayout(title_col)
         top_row.addStretch(1)
         top_row.addWidget(self._daemon_lbl)
+        top_row.addWidget(self._github_btn)
         root.addLayout(top_row)
 
         self._meta_lbl = QLabel(f"History preserved automatically  •  {self._log_path}", self)

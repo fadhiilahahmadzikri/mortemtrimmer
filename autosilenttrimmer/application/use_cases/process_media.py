@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Process media use case: backward-compatible single-shot orchestration facade."""
 
 from __future__ import annotations

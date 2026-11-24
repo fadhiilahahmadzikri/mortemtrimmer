@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Platform shell integration factory and future macOS/Linux stubs."""
 
 from __future__ import annotations

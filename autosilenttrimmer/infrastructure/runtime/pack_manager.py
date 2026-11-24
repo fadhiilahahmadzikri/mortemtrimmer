@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Signed, hash-verified, atomic Runtime Pack lifecycle manager (Doc 02 §5.2-5.3)."""
 
 from __future__ import annotations

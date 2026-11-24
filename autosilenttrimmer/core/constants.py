@@ -1,15 +1,27 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Canonical application constants and defaults."""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 
+from autosilenttrimmer.branding import (
+    APP_NAME as APP_NAME,
+)
+from autosilenttrimmer.branding import (
+    APP_SHORT_NAME as APP_SHORT_NAME,
+)
+from autosilenttrimmer.branding import (
+    APP_VERSION as APP_VERSION,
+)
+from autosilenttrimmer.branding import (
+    GITHUB_URL as GITHUB_URL,
+)
+
 # Application identity
-APP_SHORT_NAME: str = "Mortem"
-APP_NAME: str = "Mortem Primer"
 SHELL_CONTEXT_MENU_LABEL: str = "Trim This Video"
 APP_SLUG: str = "autosilenttrimmer"
-APP_VERSION: str = "1.0.0"
 APP_USER_MODEL_ID: str = "MortemPrimer.DesktopApp.1"
 DEFAULT_LANGUAGE: str = "en"
 SUPPORTED_LANGUAGES: frozenset[str] = frozenset({"en", "id"})
@@ -133,7 +145,7 @@ SHELL_REGISTRY_MENU_KEY: str = "TrimThisVideo"
 # Runtime pack & release manifest
 RELEASE_MANIFEST_SCHEMA_VERSION: str = "1.0"
 DEFAULT_RELEASE_CHANNEL: str = "stable"
-DEFAULT_RELEASE_MANIFEST_URL: str = "https://github.com/fadhiilahahmadzikri/autosilenttrimmer/releases/latest/download/release-manifest.json"
+DEFAULT_RELEASE_MANIFEST_URL: str = f"{GITHUB_URL}/releases/latest/download/release-manifest.json"
 RUNTIME_DOWNLOAD_CHUNK_BYTES: int = 256 * 1024
 RUNTIME_DOWNLOAD_TIMEOUT_SEC: float = 30.0
 RUNTIME_PUBLIC_KEY_ENV: str = "AUTOSILENTTRIMMER_MANIFEST_PUBKEY"

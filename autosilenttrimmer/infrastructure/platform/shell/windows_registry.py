@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Windows HKCU per-user File Explorer right-click shell integration (Doc 01 §9)."""
 
 from __future__ import annotations

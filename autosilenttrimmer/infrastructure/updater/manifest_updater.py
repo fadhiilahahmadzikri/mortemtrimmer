@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Signed update availability checker respecting idle queues (Doc 02 §5.7)."""
 
 from __future__ import annotations

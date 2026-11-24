@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Configuration data structures for the pipeline and application runtime."""
 
 from __future__ import annotations

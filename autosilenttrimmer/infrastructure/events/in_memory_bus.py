@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Thread-safe in-memory domain event bus."""
 
 from __future__ import annotations

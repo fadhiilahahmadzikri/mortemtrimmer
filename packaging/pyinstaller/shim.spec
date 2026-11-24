@@ -2,15 +2,36 @@
 """PyInstaller spec for ultra-fast thin Explorer shell handler (trim-shim.exe <100ms)."""
 
 import os
+import sys
 
 block_cipher = None
 ROOT_DIR = os.path.abspath(os.path.join(SPECPATH, "..", ".."))
+for p in (SPECPATH, ROOT_DIR):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from version_info import build_windows_version_info
+
+SHIM_DATAS = [
+    (
+        os.path.join(ROOT_DIR, "autosilenttrimmer", "presentation", "assets", "github_mark.svg"),
+        os.path.join("autosilenttrimmer", "presentation", "assets"),
+    ),
+    (
+        os.path.join(ROOT_DIR, "autosilenttrimmer", "presentation", "assets", "mortem_icon.png"),
+        os.path.join("autosilenttrimmer", "presentation", "assets"),
+    ),
+    (os.path.join(ROOT_DIR, "LICENSE"), "."),
+]
+notices_file = os.path.join(ROOT_DIR, "packaging", "dist_notices", "THIRD_PARTY_NOTICES.txt")
+if os.path.isfile(notices_file):
+    SHIM_DATAS.append((notices_file, "."))
 
 a = Analysis(
     [os.path.join(ROOT_DIR, "scripts", "shell_shim.py")],
     pathex=[ROOT_DIR],
     binaries=[],
-    datas=[],
+    datas=SHIM_DATAS,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -63,4 +84,9 @@ exe = EXE(
     argv_emulation=False,
     target_arch=None,
     icon=os.path.join(ROOT_DIR, "packaging", "windows", "mortem.ico"),
+    version=build_windows_version_info(
+        original_filename="trim-shim.exe",
+        internal_name="MortemTrimShim",
+        file_description="Mortem Primer Explorer Context Menu Launcher",
+    ),
 )

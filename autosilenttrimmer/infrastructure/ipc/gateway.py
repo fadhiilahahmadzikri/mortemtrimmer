@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Cross-platform single-instance IPC Gateway using Named Pipes (Windows) or Unix sockets."""
 
 from __future__ import annotations

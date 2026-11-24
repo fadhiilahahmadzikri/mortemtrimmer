@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Managed Runtime Pack downloader, verifier, installer, and rollback contract."""
 
 from __future__ import annotations

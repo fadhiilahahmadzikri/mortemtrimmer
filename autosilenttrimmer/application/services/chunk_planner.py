@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Keyframe-aligned adaptive chunk planner (Doc 01 §7.3)."""
 
 from __future__ import annotations

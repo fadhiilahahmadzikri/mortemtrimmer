@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Pluggable trim strategy contract (Doc 01 A1, §5)."""
 
 from __future__ import annotations

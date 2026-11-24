@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Persistent storage contracts for user settings and crash-resumable job manifests."""
 
 from __future__ import annotations

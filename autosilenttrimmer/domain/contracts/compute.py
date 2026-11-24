@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Compute capability prober, backend selection, and process priority contracts."""
 
 from __future__ import annotations

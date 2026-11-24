@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Media container, stream, keyframe, VFR, rotation, and HDR prober powered by PyAV."""
 
 from __future__ import annotations

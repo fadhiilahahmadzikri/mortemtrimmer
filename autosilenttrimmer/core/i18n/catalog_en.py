@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """English UI and error catalog."""
 
 from __future__ import annotations
@@ -21,6 +23,8 @@ MESSAGES_EN: MappingProxyType[str, str] = MappingProxyType(
         "tray.action_cancel": "Cancel Current Job",
         "tray.action_export_diag": "Export Diagnostics",
         "tray.action_language": "Language (EN / ID)",
+        "tray.action_about": "About Mortem Primer",
+        "tray.action_github": "GitHub Repository",
         "tray.action_quit": "Exit",
         "popup.title": "Mortem Primer",
         "popup.queued": "{stage}...",

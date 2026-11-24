@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Media manager contract for audio extraction, multiplexing, chunk encoding, and splicing."""
 
 from __future__ import annotations

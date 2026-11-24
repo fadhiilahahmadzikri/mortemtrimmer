@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Resolve pre-staged offline neural model weights bundled inside frozen or dev distributions."""
 
 from __future__ import annotations

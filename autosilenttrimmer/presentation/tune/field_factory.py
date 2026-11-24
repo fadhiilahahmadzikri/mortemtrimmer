@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Schema-driven PyQt6 form widget factory for SettingFieldSpec descriptors."""
 
 from __future__ import annotations

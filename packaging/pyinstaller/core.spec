@@ -2,11 +2,18 @@
 """PyInstaller one-dir spec for Self-Contained Offline AutoSilentTrimmer Desktop Suite."""
 
 import os
+import sys
 
 from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_submodules
 
 block_cipher = None
 ROOT_DIR = os.path.abspath(os.path.join(SPECPATH, "..", ".."))
+for p in (SPECPATH, ROOT_DIR):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from version_info import build_windows_version_info
+
 INCLUDE_AI = os.environ.get("INCLUDE_AI_BUNDLE", "1") == "1"
 
 EXCLUDES = [
@@ -36,7 +43,11 @@ DATAS = [
         os.path.join(ROOT_DIR, "autosilenttrimmer", "presentation", "assets"),
         os.path.join("autosilenttrimmer", "presentation", "assets"),
     ),
+    (os.path.join(ROOT_DIR, "LICENSE"), "."),
 ]
+notices_file = os.path.join(ROOT_DIR, "packaging", "dist_notices", "THIRD_PARTY_NOTICES.txt")
+if os.path.isfile(notices_file):
+    DATAS.append((notices_file, "."))
 BINARIES = []
 APP_ICON = os.path.join(ROOT_DIR, "packaging", "windows", "mortem.ico")
 HIDDENIMPORTS = [
@@ -46,6 +57,7 @@ HIDDENIMPORTS = [
     "PyQt6.QtGui",
     "PyQt6.QtWidgets",
     "PyQt6.QtNetwork",
+    "PyQt6.QtSvg",
 ]
 
 if INCLUDE_AI:
@@ -120,6 +132,10 @@ exe = EXE(
     disable_windowed_traceback=False,
     argv_emulation=False,
     icon=APP_ICON,
+    version=build_windows_version_info(
+        original_filename="autosilenttrimmer.exe",
+        internal_name="MortemPrimer",
+    ),
 )
 
 cli_exe = EXE(
@@ -136,6 +152,10 @@ cli_exe = EXE(
     disable_windowed_traceback=False,
     argv_emulation=False,
     icon=APP_ICON,
+    version=build_windows_version_info(
+        original_filename="autosilenttrimmer-cli.exe",
+        internal_name="MortemPrimerCLI",
+    ),
 )
 
 coll = COLLECT(

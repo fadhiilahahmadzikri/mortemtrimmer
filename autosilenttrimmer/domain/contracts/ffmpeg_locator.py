@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """FFmpeg locator contract for dynamic executable discovery."""
 
 from __future__ import annotations

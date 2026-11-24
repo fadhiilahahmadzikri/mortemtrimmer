@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Cross-platform native desktop notifications powered by MIT desktop-notifier."""
 
 from __future__ import annotations

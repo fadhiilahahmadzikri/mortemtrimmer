@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.12"
 license = "MIT"
 authors = [
-  { name = "fadhiilahahmadzikri" }
+  { name = "Fadhiilah Ahmad Zikri", email = "134697481+fadhiilahahmadzikri@users.noreply.github.com" }
 ]
 dependencies = [
   "av>=12.0.0",
@@ -52,6 +52,11 @@ dev = [
   "pytest>=8.0.0",
   "pytest-cov>=5.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/fadhiilahahmadzikri/mortemtrimmer"
+Repository = "https://github.com/fadhiilahahmadzikri/mortemtrimmer"
+Issues = "https://github.com/fadhiilahahmadzikri/mortemtrimmer/issues"
 
 [project.scripts]
 autosilenttrimmer = "autosilenttrimmer.presentation.cli.runner:run_cli"
@@ -120,6 +125,7 @@ update_changelog_on_bump = true
 annotated_tag = true
 version_files = [
   "pyproject.toml:version",
-  "autosilenttrimmer/core/constants.py:APP_VERSION",
+  "autosilenttrimmer/branding.py:APP_VERSION",
   "packaging/windows/installer.iss:#define MyAppVersion",
+  "CITATION.cff:version:",
 ]

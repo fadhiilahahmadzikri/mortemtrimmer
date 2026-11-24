@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Lightweight cross-platform 'Hex Flow' system tray UI powered by pystray."""
 
 from __future__ import annotations
@@ -6,9 +8,10 @@ import contextlib
 import logging
 import os
 import threading
+import webbrowser
 from collections.abc import Callable
 
-from autosilenttrimmer.core.constants import APP_NAME
+from autosilenttrimmer.branding import APP_NAME, GITHUB_URL
 from autosilenttrimmer.core.i18n import Localizer
 from autosilenttrimmer.domain.contracts.event_bus import IEventBus
 from autosilenttrimmer.domain.contracts.ui import ITrayUI
@@ -64,6 +67,7 @@ class PystrayTrayUI(ITrayUI):
         on_export_diagnostics: Callable[[], str],
         on_toggle_language: Callable[[], str],
         on_quit: Callable[[], None],
+        on_open_about: Callable[[], None] | None = None,
     ) -> None:
         """Start pystray icon and minimal progress popup subscribing cleanly to DomainEvents."""
         import pystray
@@ -157,6 +161,20 @@ class PystrayTrayUI(ITrayUI):
                 lambda _item: self._l10n.text("tray.action_export_diag"), _export_diag
             ),
             pystray.MenuItem(lambda _item: self._l10n.text("tray.action_language"), _toggle_lang),
+            *(
+                [
+                    pystray.MenuItem(
+                        lambda _item: self._l10n.text("tray.action_about"),
+                        lambda _icon, _item: on_open_about(),
+                    )
+                ]
+                if on_open_about is not None
+                else []
+            ),
+            pystray.MenuItem(
+                lambda _item: self._l10n.text("tray.action_github"),
+                lambda _icon, _item: webbrowser.open(GITHUB_URL),
+            ),
             pystray.MenuItem(lambda _item: self._l10n.text("tray.action_quit"), _quit_app),
         )
 

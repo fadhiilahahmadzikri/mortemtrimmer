@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Resumable HTTP manifest fetcher and pack downloader powered by httpx."""
 
 from __future__ import annotations

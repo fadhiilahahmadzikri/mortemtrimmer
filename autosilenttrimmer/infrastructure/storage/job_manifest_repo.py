@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Atomic JSON job manifest persistence for pause & crash recovery."""
 
 from __future__ import annotations

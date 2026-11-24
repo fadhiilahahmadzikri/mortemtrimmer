@@ -39,6 +39,7 @@ def _build_isolated_env(work_dir: Path) -> tuple[dict[str, str], dict[str, Path]
 
     env = os.environ.copy()
     env.pop("AUTOSILENTTRIMMER_MODELS_DIR", None)
+    env["AUTOSILENTTRIMMER_DATA_DIR"] = str(dirs["localappdata"] / "autosilenttrimmer")
     env["HF_HUB_OFFLINE"] = "1"
     env["TRANSFORMERS_OFFLINE"] = "1"
     env["TORCH_HOME"] = str(dirs["torch_hub"])
@@ -79,6 +80,58 @@ def _run_cli(
     return proc
 
 
+def _verify_version_and_pe_metadata(
+    cli_exe: Path,
+    exe_dir: Path,
+    *,
+    work_dir: Path,
+    env: dict[str, str],
+) -> None:
+    res = _run_cli(cli_exe, ["--version"], work_dir=work_dir, env=env, timeout_sec=30)
+    out = res.stdout
+    for required in (
+        "Mortem Primer",
+        "Fadhiilah Ahmad Zikri",
+        "Copyright (c) 2026 Fadhiilah Ahmad Zikri",
+        "https://github.com/fadhiilahahmadzikri/mortemtrimmer",
+    ):
+        if required not in out:
+            raise RuntimeError(
+                f"Missing expected attribution token '{required}' in --version output:\n{out}"
+            )
+
+    targets = [
+        exe_dir / "autosilenttrimmer.exe",
+        exe_dir / "autosilenttrimmer-cli.exe",
+    ]
+    shim_same_dir = exe_dir / "trim-shim.exe"
+    shim_parent_dir = exe_dir.parent / "trim-shim.exe"
+    if shim_same_dir.is_file():
+        targets.append(shim_same_dir)
+    elif shim_parent_dir.is_file():
+        targets.append(shim_parent_dir)
+
+    ps_check = (
+        "$files = @(" + ",".join(f"'{p}'" for p in targets) + "); "
+        "foreach ($f in $files) { "
+        "$vi = (Get-Item $f).VersionInfo; "
+        "Write-Host ($f + ' => Company=' + $vi.CompanyName + ' | Product=' + $vi.ProductName + ' | Copyright=' + $vi.LegalCopyright); "
+        "if ($vi.CompanyName -notmatch 'Fadhiilah Ahmad Zikri' -or $vi.LegalCopyright -notmatch 'Fadhiilah Ahmad Zikri' -or $vi.ProductName -notmatch 'Mortem Primer') { "
+        "throw ('Invalid Windows VersionInfo metadata on ' + $f) } }"
+    )
+    pe_proc = subprocess.run(
+        ["powershell", "-NoProfile", "-Command", ps_check],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=30,
+    )
+    print(pe_proc.stdout.strip())
+    if pe_proc.returncode != 0:
+        raise RuntimeError(f"PE VersionInfo check failed:\n{pe_proc.stderr}")
+
+
 def _verify_readiness(cli_exe: Path, *, work_dir: Path, env: dict[str, str]) -> None:
     res = _run_cli(cli_exe, ["--check"], work_dir=work_dir, env=env, timeout_sec=120)
     out = res.stdout
@@ -93,9 +146,11 @@ def _verify_readiness(cli_exe: Path, *, work_dir: Path, env: dict[str, str]) -> 
     ):
         if required not in out:
             raise RuntimeError(f"Missing expected readiness marker '{required}' in --check output")
-    for forbidden in ("OPTIONAL_MISSING", "[ERROR]"):
-        if forbidden in out:
-            raise RuntimeError(f"Unexpected failure status '{forbidden}' in --check output")
+    if "[ERROR]" in out or "CRITICAL DEPENDENCY FAILURE" in out:
+        raise RuntimeError("Critical error reported in --check output")
+    for line in out.splitlines():
+        if "[OPTIONAL_MISSING]" in line and "Shell Context Menu" not in line:
+            raise RuntimeError(f"Unexpected missing AI/media component in --check: {line}")
     print("Readiness check passed cleanly.")
 
 
@@ -253,6 +308,7 @@ def run_verification(
 
 def _run_inside(cli_exe: Path, *, sample_wav: Path, work_dir: Path, skip_ui: bool) -> None:
     env, dirs = _build_isolated_env(work_dir)
+    _verify_version_and_pe_metadata(cli_exe, cli_exe.parent, work_dir=work_dir, env=env)
     _verify_readiness(cli_exe, work_dir=work_dir, env=env)
     _verify_offline_trims(
         cli_exe,
@@ -264,6 +320,7 @@ def _run_inside(cli_exe: Path, *, sample_wav: Path, work_dir: Path, skip_ui: boo
     if not skip_ui:
         _verify_ui_flag(cli_exe, "--tune", work_dir=work_dir, env=env)
         _verify_ui_flag(cli_exe, "--logs", work_dir=work_dir, env=env)
+        _verify_ui_flag(cli_exe, "--about", work_dir=work_dir, env=env)
     print(f"All frozen offline smoke checks PASSED for {cli_exe.parent}")
 
 

@@ -2,7 +2,11 @@
 
 #define MyAppName "Mortem Primer"
 #define MyAppShortName "Mortem"
-#define MyAppPublisher "Mortem"
+#define MyAppPublisher "Fadhiilah Ahmad Zikri"
+#define MyAppPublisherURL "https://github.com/fadhiilahahmadzikri"
+#define MyAppURL "https://github.com/fadhiilahahmadzikri/mortemtrimmer"
+#define MyAppSupportURL "https://github.com/fadhiilahahmadzikri/mortemtrimmer/issues"
+#define MyAppCopyright "Copyright (c) 2026 Fadhiilah Ahmad Zikri"
 #define MyAppVersion "1.0.0"
 #define MyAppExeName "autosilenttrimmer.exe"
 #define MyAppShimExeName "trim-shim.exe"
@@ -13,6 +17,10 @@ AppId={{B4E73E3A-9C2F-4F91-A72E-83D18D410F12}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppPublisherURL}
+AppSupportURL={#MyAppSupportURL}
+AppUpdatesURL={#MyAppURL}/releases
+AppCopyright={#MyAppCopyright}
 DefaultDirName={localappdata}\Programs\AutoSilentTrimmer
 DefaultGroupName={#MyAppName}
 PrivilegesRequired=lowest
@@ -39,6 +47,7 @@ Name: "autostart"; Description: "Start {#MyAppName} background service on sign-i
 [Files]
 Source: "..\..\dist\AutoSilentTrimmer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\..\dist\{#MyAppShimExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\packaging\dist_notices\THIRD_PARTY_NOTICES.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
@@ -72,9 +81,9 @@ begin
   if CurUninstallStep = usPostUninstall then
   begin
     DataDir := ExpandConstant('{localappdata}\autosilenttrimmer');
-    if DirExists(DataDir) then
+    if (not UninstallSilent()) and DirExists(DataDir) then
     begin
-      if MsgBox('Remove downloaded Runtime Packs, logs, and settings from ' + DataDir + '?', mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+      if SuppressibleMsgBox('Remove downloaded Runtime Packs, logs, and settings from ' + DataDir + '?', mbConfirmation, MB_YESNO or MB_DEFBUTTON2, IDNO) = IDYES then
       begin
         DelTree(DataDir, True, True, True);
       end;

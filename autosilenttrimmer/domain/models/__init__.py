@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Domain data models and command structures."""
 
 from autosilenttrimmer.domain.models.processing_command import ProcessMediaCommand

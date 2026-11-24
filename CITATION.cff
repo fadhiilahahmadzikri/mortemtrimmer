@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+title: Mortem Primer
+message: "If you use this software in your work, please cite it using the metadata below."
+type: software
+authors:
+  - given-names: Fadhiilah Ahmad
+    family-names: Zikri
+repository-code: https://github.com/fadhiilahahmadzikri/mortemtrimmer
+url: https://github.com/fadhiilahahmadzikri/mortemtrimmer
+license: MIT
+version: 1.0.0
+date-released: 2026-11-24

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Processing command and neutral JobRequest models (Doc 01 §6.1)."""
 
 from __future__ import annotations

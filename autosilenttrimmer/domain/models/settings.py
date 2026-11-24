@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Persistent user application settings domain model and config mapper."""
 
 from __future__ import annotations

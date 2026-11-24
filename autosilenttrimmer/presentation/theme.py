@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Canonical Mortem Primer visual tokens, QSS theme, icon loader, and UI formatters."""
 
 from __future__ import annotations
@@ -84,6 +86,62 @@ def resolve_asset_path(filename: str) -> str | None:
         if path.is_file():
             return str(path)
     return None
+
+
+def resolve_bundled_doc_path(filename: str) -> str | None:
+    """Resolve distributed license or notice document in dev and PyInstaller frozen builds."""
+    repo_root = Path(__file__).resolve().parents[2]
+    candidates = [
+        repo_root / "packaging" / "dist_notices" / filename,
+        repo_root / filename,
+    ]
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)
+        exe_dir = Path(os.path.dirname(os.path.abspath(sys.executable)))
+        frozen_candidates: list[Path] = []
+        if meipass:
+            mp = Path(meipass)
+            frozen_candidates.extend([mp / "dist_notices" / filename, mp / filename])
+        frozen_candidates.extend(
+            [
+                exe_dir / filename,
+                exe_dir / "dist_notices" / filename,
+                exe_dir / "_internal" / "dist_notices" / filename,
+                exe_dir / "_internal" / filename,
+            ]
+        )
+        candidates = frozen_candidates + candidates
+    for path in candidates:
+        if path.is_file():
+            return str(path)
+    return None
+
+
+def render_github_icon(color_hex_or_qcolor: object, size: int = 16) -> object:
+    """Render bundled MIT GitHub Octicon SVG tinted for high contrast in light or dark mode."""
+    from PyQt6.QtCore import QByteArray, Qt
+    from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
+    from PyQt6.QtSvg import QSvgRenderer
+
+    color = (
+        QColor(color_hex_or_qcolor)
+        if not isinstance(color_hex_or_qcolor, QColor)
+        else color_hex_or_qcolor
+    )
+    svg_path = resolve_asset_path("github_mark.svg")
+    if svg_path is None:
+        return QIcon()
+    svg_bytes = Path(svg_path).read_bytes()
+    renderer = QSvgRenderer(QByteArray(svg_bytes))
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    renderer.render(painter)
+    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+    painter.fillRect(pixmap.rect(), color)
+    painter.end()
+    return QIcon(pixmap)
 
 
 def format_stage_label(raw_stage: str) -> str:
@@ -349,5 +407,44 @@ def build_qt_stylesheet() -> str:
         border: 1px solid {BORDER_STRONG};
         padding: 5px 8px;
         border-radius: 4px;
+    }}
+    QMenuBar {{
+        background-color: {BG_DEEP};
+        color: {TEXT_SECONDARY};
+        border-bottom: 1px solid {BORDER_SUBTLE};
+        padding: 2px 6px;
+    }}
+    QMenuBar::item {{
+        background-color: transparent;
+        padding: 4px 10px;
+        border-radius: 4px;
+    }}
+    QMenuBar::item:selected {{
+        background-color: {BG_SURFACE};
+        color: {ACCENT_GOLD_BRIGHT};
+    }}
+    QMenu {{
+        background-color: {BG_SURFACE};
+        color: {TEXT_PRIMARY};
+        border: 1px solid {BORDER_STRONG};
+        padding: 4px;
+    }}
+    QMenu::item {{
+        padding: 6px 18px;
+        border-radius: 4px;
+    }}
+    QMenu::item:selected {{
+        background-color: {ACCENT_GOLD};
+        color: {TEXT_ON_ACCENT};
+    }}
+    QToolButton#githubCornerButton {{
+        background-color: {BG_ELEVATED};
+        border: 1px solid {BORDER_SUBTLE};
+        border-radius: 6px;
+        padding: 4px;
+    }}
+    QToolButton#githubCornerButton:hover {{
+        background-color: {BG_HOVER};
+        border-color: {BORDER_STRONG};
     }}
     """

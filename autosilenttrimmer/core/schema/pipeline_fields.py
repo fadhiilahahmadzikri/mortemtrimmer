@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Pipeline strategy, speech detector, and denoiser schema field definitions."""
 
 from __future__ import annotations

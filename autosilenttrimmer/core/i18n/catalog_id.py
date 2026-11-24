@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fadhiilah Ahmad Zikri
 """Indonesian UI and error catalog."""
 
 from __future__ import annotations
@@ -21,6 +23,8 @@ MESSAGES_ID: MappingProxyType[str, str] = MappingProxyType(
         "tray.action_cancel": "Batalkan Tugas Saat Ini",
         "tray.action_export_diag": "Ekspor Diagnostik",
         "tray.action_language": "Bahasa (EN / ID)",
+        "tray.action_about": "Tentang Mortem Primer",
+        "tray.action_github": "Repositori GitHub",
         "tray.action_quit": "Keluar",
         "popup.title": "Mortem Primer",
         "popup.queued": "{stage}...",
