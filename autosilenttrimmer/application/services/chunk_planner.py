@@ -20,9 +20,11 @@ class ChunkPlanner:
         self,
         chunk_min_sec: float = TARGET_CHUNK_MIN_SEC,
         chunk_max_sec: float = TARGET_CHUNK_MAX_SEC,
+        min_chunkable_sec: float = MIN_CHUNKABLE_DURATION_SEC,
     ) -> None:
         self._chunk_min_sec = chunk_min_sec
         self._chunk_max_sec = chunk_max_sec
+        self._min_chunkable_sec = min_chunkable_sec
 
     def plan_chunks(
         self,
@@ -36,11 +38,7 @@ class ChunkPlanner:
             return []
 
         total_keep = sum(s.duration for s in keep_segments)
-        if (
-            worker_count <= 1
-            or mode == ExecutionMode.COPY
-            or total_keep < MIN_CHUNKABLE_DURATION_SEC
-        ):
+        if worker_count <= 1 or mode == ExecutionMode.COPY or total_keep < self._min_chunkable_sec:
             return [
                 ChunkPlan(
                     index=0,

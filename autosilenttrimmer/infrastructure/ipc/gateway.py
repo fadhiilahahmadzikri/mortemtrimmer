@@ -51,10 +51,16 @@ class LocalIPCGateway(IIPCGateway):
         self._buffer: list[str] = []
         self._last_arrival: float = 0.0
         self._callback: Callable[[list[str]], None] | None = None
+        self._reload_callback: Callable[[], None] | None = None
 
-    def start(self, on_batch_received: Callable[[list[str]], None]) -> None:
+    def start(
+        self,
+        on_batch_received: Callable[[list[str]], None],
+        on_reload_settings: Callable[[], None] | None = None,
+    ) -> None:
         """Bind OS pipe/socket and launch coalescing accept loops."""
         self._callback = on_batch_received
+        self._reload_callback = on_reload_settings
         self._stop_event.clear()
 
         if self._family == "AF_UNIX" and os.path.exists(self._address):
@@ -83,6 +89,10 @@ class LocalIPCGateway(IIPCGateway):
                             self._buffer.extend(paths)
                             self._last_arrival = time.monotonic()
                     conn.send({"ok": True, "queued": len(paths)})
+                elif isinstance(msg, dict) and msg.get("cmd") == "reload_settings":
+                    if self._reload_callback is not None:
+                        self._reload_callback()
+                    conn.send({"ok": True})
                 elif isinstance(msg, dict) and msg.get("cmd") == "ping":
                     conn.send({"ok": True, "status": "alive"})
                 else:
@@ -150,3 +160,13 @@ class LocalIPCClient(IJobGatewayClient):
             except OSError:
                 time.sleep(0.05)
         return False
+
+    def notify_settings_updated(self) -> bool:
+        """Signal active background daemon to reload persisted UserSettings immediately."""
+        try:
+            with Client(self._address, family=self._family) as conn:
+                conn.send({"cmd": "reload_settings"})
+                resp = conn.recv()
+                return bool(isinstance(resp, dict) and resp.get("ok"))
+        except OSError:
+            return False

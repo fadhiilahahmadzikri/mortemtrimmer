@@ -124,6 +124,17 @@ def test_execution_planner_adaptive_worker_cap() -> None:
     assert plan.mode == ExecutionMode.COPY
     assert plan.video_encoder == "copy"
 
+    multi_plan = ExecutionPlanner().build_plan(
+        probe,
+        [MediaSegment(1.0, 4.0), MediaSegment(8.0, 12.0)],
+        caps,
+        backend,
+        ExecutionConfig(frame_accurate=False),
+        requires_frame_accuracy=True,
+    )
+    assert multi_plan.mode == ExecutionMode.REENCODE
+    assert multi_plan.video_encoder == "h264_nvenc"
+
 
 def test_output_path_resolver_non_destructive_and_increments(tmp_path: Path) -> None:
     src = tmp_path / "interview.mp4"
@@ -147,3 +158,37 @@ def test_bilingual_i18n_catalog_parity() -> None:
     assert "Pemotongan" in l10n.text("notify.completed_title")
     assert l10n.toggle_language() == "en"
     assert "Trim Complete" in l10n.text("notify.completed_title")
+
+
+def test_auto_silence_strategy_clamps_segments_to_media_duration() -> None:
+    from autosilenttrimmer.domain.contracts.vad import IVoiceActivityDetector
+    from autosilenttrimmer.infrastructure.strategies.auto_silence import AutoSilenceTrimStrategy
+
+    class _OvershootVAD(IVoiceActivityDetector):
+        def get_keep_segments(
+            self, audio_path: str, manifest_path: str | None = None
+        ) -> list[MediaSegment]:
+            return [
+                MediaSegment(start=1.0, end=9.5),
+                MediaSegment(start=10.5, end=12.0),
+            ]
+
+    probe = MediaProbeInfo(
+        path="demo.mp4",
+        container_format="mp4",
+        extension=".mp4",
+        duration_sec=8.25,
+        file_size_bytes=1024,
+        is_video=True,
+    )
+    segs = AutoSilenceTrimStrategy(_OvershootVAD()).plan_keep_segments(probe)
+    assert segs == [MediaSegment(start=1.0, end=8.25)]
+
+
+def test_silero_vad_rejects_unsupported_sample_rate() -> None:
+    from autosilenttrimmer.core.config import VADConfig
+    from autosilenttrimmer.infrastructure.vad.silero import SileroBasedVAD
+
+    vad = SileroBasedVAD(VADConfig(sample_rate_vad=48000))
+    with pytest.raises(ValueError, match="Silero VAD supports only sample rates"):
+        vad.get_keep_segments("unused.wav")

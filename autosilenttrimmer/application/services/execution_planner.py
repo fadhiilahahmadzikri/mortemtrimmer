@@ -23,7 +23,7 @@ class ExecutionPlanner:
     """Computes ExecutionMode, adaptive worker count N, and ProcessingPlan."""
 
     def __init__(self, chunk_planner: ChunkPlanner | None = None) -> None:
-        self._chunk_planner = chunk_planner or ChunkPlanner()
+        self._custom_chunk_planner = chunk_planner
 
     def build_plan(
         self,
@@ -36,7 +36,11 @@ class ExecutionPlanner:
     ) -> ProcessingPlan:
         """Determine execution mode, adaptive worker count N, and keyframe chunks."""
         if probe_info.is_video:
-            use_reencode = requires_frame_accuracy and execution_cfg.frame_accurate
+            # Multi-segment timeline cuts inside wide keyframe GOPs repeat frames under -c copy.
+            multi_segment_cut = len(keep_segments) > 1
+            use_reencode = multi_segment_cut or (
+                requires_frame_accuracy and execution_cfg.frame_accurate
+            )
             mode = ExecutionMode.REENCODE if use_reencode else ExecutionMode.COPY
             encoder = VIDEO_CODEC_COPY if mode == ExecutionMode.COPY else backend.video_encoder
         else:
@@ -50,7 +54,12 @@ class ExecutionPlanner:
             requested_max=execution_cfg.max_workers,
         )
 
-        chunks = self._chunk_planner.plan_chunks(
+        planner = self._custom_chunk_planner or ChunkPlanner(
+            chunk_min_sec=execution_cfg.target_chunk_min_sec,
+            chunk_max_sec=execution_cfg.target_chunk_max_sec,
+            min_chunkable_sec=execution_cfg.min_chunkable_duration_sec,
+        )
+        chunks = planner.plan_chunks(
             probe_info=probe_info,
             keep_segments=keep_segments,
             mode=mode,

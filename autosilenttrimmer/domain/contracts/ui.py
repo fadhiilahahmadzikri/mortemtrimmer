@@ -13,6 +13,7 @@ class ITrayUI(ABC):
     def start(
         self,
         *,
+        on_open_tune: Callable[[], None],
         on_pause_toggle: Callable[[], None],
         on_cancel_current: Callable[[], None],
         on_export_diagnostics: Callable[[], str],

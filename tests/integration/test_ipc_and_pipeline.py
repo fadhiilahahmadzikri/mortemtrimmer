@@ -42,14 +42,20 @@ def test_spike_s1_ipc_multiselect_coalescing(tmp_path: Path) -> None:
         fam = "AF_UNIX"
 
     received_batches: list[list[str]] = []
+    reloaded = threading.Event()
     done_ev = threading.Event()
 
     gateway = LocalIPCGateway(address=addr, family=fam, coalesce_window_sec=0.15)
-    gateway.start(lambda batch: (received_batches.append(batch), done_ev.set()))
+    gateway.start(
+        lambda batch: (received_batches.append(batch), done_ev.set()),
+        on_reload_settings=reloaded.set,
+    )
 
     try:
         client = LocalIPCClient(address=addr, family=fam)
         assert client.is_daemon_running()
+        assert client.notify_settings_updated()
+        assert reloaded.wait(timeout=1.5)
 
         paths = [f"video_{i}.mp4" for i in range(6)]
         with ThreadPoolExecutor(max_workers=6) as pool:

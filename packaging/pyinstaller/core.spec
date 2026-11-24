@@ -13,6 +13,20 @@ EXCLUDES = [
     "pre_commit",
     "commitizen",
     "setuptools",
+    "PyQt6.QtWebEngineCore",
+    "PyQt6.QtWebEngineWidgets",
+    "PyQt6.QtMultimedia",
+    "PyQt6.QtMultimediaWidgets",
+    "PyQt6.QtQuick",
+    "PyQt6.QtQml",
+    "PyQt6.Qt3DCore",
+    "PyQt6.QtSql",
+    "PyQt6.QtBluetooth",
+    "PyQt6.QtPositioning",
+    "PyQt6.QtPdf",
+    "PyQt6.QtSensors",
+    "PyQt6.QtSerialPort",
+    "PyQt6.QtTest",
 ]
 if not INCLUDE_AI:
     # Lean Core keeps heavy gigabyte ML wheels in on-demand Runtime Packs (Doc 02 §5.2-B)
@@ -38,6 +52,10 @@ a = Analysis(
     hiddenimports=[
         "pystray._win32",
         "desktop_notifier.backends.winrt",
+        "PyQt6.QtCore",
+        "PyQt6.QtGui",
+        "PyQt6.QtWidgets",
+        "PyQt6.QtNetwork",
     ],
     hookspath=[],
     hooksconfig={},

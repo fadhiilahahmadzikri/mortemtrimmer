@@ -11,6 +11,7 @@ MESSAGES_ID: MappingProxyType[str, str] = MappingProxyType(
         "tray.status_idle": "Trim This Video - Siap",
         "tray.status_running": "Memproses ({percent:.0f}%) - {filename}",
         "tray.status_paused": "Dijeda - {filename}",
+        "tray.action_tune": "Tune (Konfigurasi)",
         "tray.action_pause": "Jeda Proses Aktif",
         "tray.action_resume": "Lanjutkan Proses",
         "tray.action_cancel": "Batalkan Tugas Saat Ini",

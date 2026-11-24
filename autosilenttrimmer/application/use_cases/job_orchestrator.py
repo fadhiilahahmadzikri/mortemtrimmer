@@ -109,6 +109,39 @@ class JobOrchestrator:
         self._cancel_requested = threading.Event()
         self._stop_worker = threading.Event()
         self._worker_thread: threading.Thread | None = None
+        self._job_exec_lock = threading.Lock()
+
+    def reconfigure(
+        self,
+        *,
+        config: MediaProcessingConfig,
+        media_manager: IMediaManager,
+        media_verifier: IMediaVerifier,
+        trim_strategy: ITrimStrategy,
+        noise_reduction: INoiseReductionStrategy | None = None,
+        visualizer: IVisualizer | None = None,
+        notifier: INotifier | None = None,
+        priority_ctrl: IProcessPriorityController | None = None,
+    ) -> None:
+        """Atomically apply reloaded UserSettings cleanly between queued jobs."""
+        with self._job_exec_lock:
+            self._config = config
+            self._media_manager = media_manager
+            self._verifier = media_verifier
+            self._strategy = trim_strategy
+            self._noise_reduction = noise_reduction
+            self._visualizer = visualizer
+            if notifier is not None:
+                self._notifier = notifier
+            if priority_ctrl is not None:
+                self._priority_ctrl = priority_ctrl
+            self._worker_pool = ChunkWorkerPool(
+                media_manager=media_manager,
+                compute_backend=self._compute_backend,
+                event_bus=self._bus,
+                notifier=self._notifier,
+                max_retries=self._config.execution.chunk_max_retries,
+            )
 
     def start_background_worker(self) -> None:
         """Start daemon queue consumer thread."""
@@ -162,6 +195,10 @@ class JobOrchestrator:
 
     def execute_job(self, command: ProcessMediaCommand) -> ProcessingResult:
         """Execute deterministic PROBE -> PLAN -> RUN -> MERGE -> VERIFY -> PUBLISH pipeline."""
+        with self._job_exec_lock:
+            return self._execute_job_locked(command)
+
+    def _execute_job_locked(self, command: ProcessMediaCommand) -> ProcessingResult:
         self._cancel_requested.clear()
         if self._priority_ctrl and self._config.execution.background_priority:
             self._priority_ctrl.apply_background_priority()
@@ -312,7 +349,9 @@ class JobOrchestrator:
         job.source_size = probe.file_size_bytes
         job.source_mtime = os.path.getmtime(job.source_path)
         OutputPathResolver.ensure_disk_space(
-            command.output_path or job.source_path, probe.file_size_bytes
+            command.output_path or job.source_path,
+            probe.file_size_bytes,
+            safety_factor=self._config.output_policy.disk_space_safety_factor,
         )
         return probe
 

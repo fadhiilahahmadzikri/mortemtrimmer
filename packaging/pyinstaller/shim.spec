@@ -31,6 +31,8 @@ a = Analysis(
         "onnxruntime",
         "tkinter",
         "pystray",
+        "PyQt6",
+        "PySide6",
         "cryptography",
         "httpx",
         "pytest",

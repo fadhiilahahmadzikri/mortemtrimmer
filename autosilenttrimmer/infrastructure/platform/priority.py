@@ -6,6 +6,7 @@ import logging
 import os
 
 import psutil
+from autosilenttrimmer.core.constants import DEFAULT_LOW_BATTERY_THRESHOLD_PERCENT
 from autosilenttrimmer.domain.contracts.compute import IProcessPriorityController
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,11 @@ logger = logging.getLogger(__name__)
 class PsutilPriorityController(IProcessPriorityController):
     """Applies low CPU/IO priority for polite background execution (Doc 01 §7.5)."""
 
-    LOW_BATTERY_THRESHOLD_PERCENT: float = 20.0
+    def __init__(
+        self,
+        low_battery_threshold_percent: float = DEFAULT_LOW_BATTERY_THRESHOLD_PERCENT,
+    ) -> None:
+        self._low_battery_threshold = low_battery_threshold_percent
 
     def apply_background_priority(self) -> None:
         """Set background priority cleanly across Windows, macOS, and Linux."""
@@ -35,6 +40,6 @@ class PsutilPriorityController(IProcessPriorityController):
             battery = psutil.sensors_battery()
             if battery is None or battery.power_plugged:
                 return False
-            return float(battery.percent) <= self.LOW_BATTERY_THRESHOLD_PERCENT
+            return float(battery.percent) <= self._low_battery_threshold
         except Exception:
             return False

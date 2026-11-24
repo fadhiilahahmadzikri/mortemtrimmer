@@ -42,6 +42,7 @@ Source: "..\..\packaging\dist_notices\THIRD_PARTY_NOTICES.txt"; DestDir: "{app}"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--daemon --tray"; AppUserModelID: "{#MyAppUserModelID}"
+Name: "{group}\Tune {#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--tune"
 Name: "{group}\System Readiness Check"; Filename: "{app}\autosilenttrimmer-cli.exe"; Parameters: "--check"
 Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--daemon --tray"; Tasks: autostart
 

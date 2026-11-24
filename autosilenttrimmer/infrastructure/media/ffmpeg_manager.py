@@ -8,16 +8,12 @@ import shutil
 import subprocess
 import tempfile
 
+from autosilenttrimmer.core.config import AudioConfig
 from autosilenttrimmer.core.constants import (
     AUDIO_CODEC_AAC,
     AUDIO_CODEC_COPY,
     AUDIO_CODEC_PCM_S16LE,
-    DEFAULT_AUDIO_BITRATE,
-    DEFAULT_AUDIO_CHANNELS_MONO,
-    DEFAULT_SAMPLE_RATE_DEEPFILTER,
     DEFAULT_X264_BF,
-    DEFAULT_X264_CRF,
-    DEFAULT_X264_PRESET,
     TEMP_SCRIPT_SUFFIX,
     VIDEO_CODEC_COPY,
     VIDEO_CODEC_LIBX264,
@@ -37,8 +33,9 @@ def _win_no_window_flags() -> int:
 class FFmpegMediaManager(IMediaManager):
     """Media manager implementation driven by FFmpeg CLI subprocess."""
 
-    def __init__(self, ffmpeg_path: str) -> None:
+    def __init__(self, ffmpeg_path: str, audio_config: AudioConfig | None = None) -> None:
         self._ffmpeg_path = ffmpeg_path
+        self._audio_cfg = audio_config or AudioConfig()
         if not os.path.exists(self._ffmpeg_path):
             raise FFmpegExecutionException(
                 f"FFmpeg executable not found at specified path: {self._ffmpeg_path}"
@@ -73,10 +70,9 @@ class FFmpegMediaManager(IMediaManager):
             ) from e
 
     def extract_audio(self, source_media_path: str, destination_audio_path: str) -> None:
-        logger.info(
-            "Extracting audio stream (%d Hz mono PCM)...",
-            DEFAULT_SAMPLE_RATE_DEEPFILTER,
-        )
+        sr = self._audio_cfg.sample_rate_deepfilter
+        ch = self._audio_cfg.channels_mono
+        logger.info("Extracting audio stream (%d Hz mono PCM)...", sr)
         command = [
             self._ffmpeg_path,
             "-y",
@@ -86,9 +82,9 @@ class FFmpegMediaManager(IMediaManager):
             "-acodec",
             AUDIO_CODEC_PCM_S16LE,
             "-ar",
-            str(DEFAULT_SAMPLE_RATE_DEEPFILTER),
+            str(sr),
             "-ac",
-            str(DEFAULT_AUDIO_CHANNELS_MONO),
+            str(ch),
             destination_audio_path,
         ]
         self._run_ffmpeg(command)
@@ -107,7 +103,7 @@ class FFmpegMediaManager(IMediaManager):
             "-c:a",
             AUDIO_CODEC_AAC,
             "-b:a",
-            DEFAULT_AUDIO_BITRATE,
+            self._audio_cfg.bitrate,
             "-map",
             "0:v:0",
             "-map",
@@ -129,7 +125,7 @@ class FFmpegMediaManager(IMediaManager):
             codec,
         ]
         if codec == AUDIO_CODEC_AAC:
-            command.extend(["-b:a", DEFAULT_AUDIO_BITRATE])
+            command.extend(["-b:a", self._audio_cfg.bitrate])
         command.append(output_path)
         self._run_ffmpeg(command)
 
@@ -149,24 +145,8 @@ class FFmpegMediaManager(IMediaManager):
         _, ext = os.path.splitext(media_path)
         is_video = ext.lower() in VIDEO_EXTENSIONS
 
-        if copy_mode and is_video and len(segments) == 1:
-            start, end = segments[0].start, segments[0].end
-            cmd = [
-                self._ffmpeg_path,
-                "-y",
-                "-ss",
-                f"{start:.6f}",
-                "-to",
-                f"{end:.6f}",
-                "-i",
-                media_path,
-                "-c",
-                "copy",
-                "-avoid_negative_ts",
-                "make_zero",
-                output_path,
-            ]
-            self._run_ffmpeg(cmd)
+        if copy_mode and is_video:
+            self._slice_copy_segments(media_path, segments, output_path)
             return
 
         filter_complex, map_args, codec_args = self._build_filter_graph(
@@ -222,6 +202,44 @@ class FFmpegMediaManager(IMediaManager):
             if os.path.exists(fc_path):
                 os.remove(fc_path)
 
+    def _slice_copy_segments(
+        self, media_path: str, segments: list[MediaSegment], output_path: str
+    ) -> None:
+        """Cut one or more segments using stream copy without invalid filter graphs."""
+
+        def _copy_one(seg: MediaSegment, dest: str) -> None:
+            self._run_ffmpeg(
+                [
+                    self._ffmpeg_path,
+                    "-y",
+                    "-ss",
+                    f"{seg.start:.6f}",
+                    "-to",
+                    f"{seg.end:.6f}",
+                    "-i",
+                    media_path,
+                    "-c",
+                    "copy",
+                    "-avoid_negative_ts",
+                    "make_zero",
+                    dest,
+                ]
+            )
+
+        if len(segments) == 1:
+            _copy_one(segments[0], output_path)
+            return
+
+        _, out_ext = os.path.splitext(output_path)
+        part_ext = out_ext or os.path.splitext(media_path)[1] or ".mp4"
+        with tempfile.TemporaryDirectory(prefix="copy_segs_") as seg_dir:
+            part_paths: list[str] = []
+            for idx, seg in enumerate(segments):
+                part_path = os.path.join(seg_dir, f"seg_{idx:04d}{part_ext}")
+                _copy_one(seg, part_path)
+                part_paths.append(part_path)
+            self.concat_files(part_paths, output_path, is_video=True)
+
     def concat_files(self, chunk_paths: list[str], output_path: str, is_video: bool) -> None:
         """Losslessly concatenate chunk artifacts via FFmpeg concat demuxer (Doc 01 §7.6)."""
         if not chunk_paths:
@@ -264,7 +282,7 @@ class FFmpegMediaManager(IMediaManager):
                     "-c:a",
                     AUDIO_CODEC_AAC,
                     "-b:a",
-                    DEFAULT_AUDIO_BITRATE,
+                    self._audio_cfg.bitrate,
                 ]
                 if is_video
                 else ["-c:a", AUDIO_CODEC_PCM_S16LE]
@@ -339,8 +357,7 @@ class FFmpegMediaManager(IMediaManager):
 
         return "".join(filter_parts), map_args, codec_args
 
-    @staticmethod
-    def _video_codec_args(video_encoder: str) -> list[str]:
+    def _video_codec_args(self, video_encoder: str) -> list[str]:
         if video_encoder == VIDEO_CODEC_LIBX264:
             return [
                 "-c:v",
@@ -348,13 +365,13 @@ class FFmpegMediaManager(IMediaManager):
                 "-bf",
                 DEFAULT_X264_BF,
                 "-crf",
-                DEFAULT_X264_CRF,
+                self._audio_cfg.x264_crf,
                 "-preset",
-                DEFAULT_X264_PRESET,
+                self._audio_cfg.x264_preset,
                 "-c:a",
                 AUDIO_CODEC_AAC,
                 "-b:a",
-                DEFAULT_AUDIO_BITRATE,
+                self._audio_cfg.bitrate,
             ]
         # Hardware encoder options (NVENC / QSV / AMF / VideoToolbox / VAAPI)
         return [
@@ -363,7 +380,7 @@ class FFmpegMediaManager(IMediaManager):
             "-c:a",
             AUDIO_CODEC_AAC,
             "-b:a",
-            DEFAULT_AUDIO_BITRATE,
+            self._audio_cfg.bitrate,
         ]
 
     def _run_ffmpeg(self, command: list[str]) -> None:

@@ -15,6 +15,7 @@ SUPPORTED_LANGUAGES: frozenset[str] = frozenset({"en", "id"})
 # Audio stream defaults
 DEFAULT_SAMPLE_RATE_DEEPFILTER: int = 48000
 DEFAULT_SAMPLE_RATE_VAD: int = 16000
+SUPPORTED_VAD_SAMPLE_RATES: tuple[int, ...] = (8000, 16000)
 DEFAULT_AUDIO_CHANNELS_MONO: int = 1
 DEFAULT_AUDIO_BITRATE: str = "256k"
 
@@ -32,10 +33,30 @@ HW_ENCODER_CANDIDATES: tuple[tuple[str, str], ...] = (
     ("vaapi", "h264_vaapi"),
 )
 
-# Video encoding parameters
+# Video encoding & choice tuples
 DEFAULT_X264_PRESET: str = "superfast"
 DEFAULT_X264_CRF: str = "18"
 DEFAULT_X264_BF: str = "0"
+SUPPORTED_X264_PRESETS: tuple[str, ...] = (
+    "ultrafast",
+    "superfast",
+    "veryfast",
+    "faster",
+    "fast",
+    "medium",
+    "slow",
+)
+SUPPORTED_AUDIO_BITRATES: tuple[str, ...] = ("128k", "192k", "256k", "320k")
+SUPPORTED_WHISPER_MODELS: tuple[str, ...] = ("tiny", "base", "small", "medium", "large-v3")
+SUPPORTED_TRIM_STRATEGIES: tuple[str, ...] = ("auto-silence", "manual-range")
+SUPPORTED_VAD_ENGINES: tuple[str, ...] = ("silero", "whisper", "energy", "none")
+SUPPORTED_NOISE_METHODS: tuple[str, ...] = ("none", "spectral", "deepfilter")
+SUPPORTED_COMPUTE_POLICIES: tuple[str, ...] = ("g2_gpu_preferred", "g1_hard_gate", "g3_cpu_only")
+SUPPORTED_OUTPUT_LOCATIONS: tuple[str, ...] = ("beside-source", "custom")
+SUPPORTED_CONFLICT_MODES: tuple[str, ...] = ("increment", "overwrite")
+SUPPORTED_RELEASE_CHANNELS: tuple[str, ...] = ("stable", "beta")
+DEFAULT_LOW_BATTERY_THRESHOLD_PERCENT: float = 20.0
+TUNE_WINDOW_LOCK_FILENAME: str = "autosilenttrimmer_tune.lock"
 
 # Supported file extension tiers (Doc 01 §11)
 TIER1_VIDEO_EXTENSIONS: frozenset[str] = frozenset({".mp4", ".mkv", ".mov", ".webm"})

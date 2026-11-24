@@ -38,5 +38,10 @@ desktop.ini
 *.tmp
 *.temp
 
+# Local sample media & sparse benchmark results (copied/generated locally)
+samples/*.mp4
+samples/*.wav
+samples/results/
+
 # Release notes (local only)
 RELEASE_NOTES.md

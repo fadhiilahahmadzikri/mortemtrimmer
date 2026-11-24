@@ -7,10 +7,14 @@ from collections.abc import Callable
 
 
 class IIPCGateway(ABC):
-    """Background IPC server receiving multi-select file batches safely."""
+    """Background IPC server receiving multi-select file batches and control signals."""
 
     @abstractmethod
-    def start(self, on_batch_received: Callable[[list[str]], None]) -> None:
+    def start(
+        self,
+        on_batch_received: Callable[[list[str]], None],
+        on_reload_settings: Callable[[], None] | None = None,
+    ) -> None:
         """Start listening on OS-native pipe/socket and coalesce bursts."""
         pass
 
@@ -21,7 +25,7 @@ class IIPCGateway(ABC):
 
 
 class IJobGatewayClient(ABC):
-    """Thin client invoked by Explorer shell shim to enqueue paths to running daemon."""
+    """Thin client invoked by Explorer shell shim or Tune UI to talk to running daemon."""
 
     @abstractmethod
     def is_daemon_running(self) -> bool:
@@ -31,4 +35,9 @@ class IJobGatewayClient(ABC):
     @abstractmethod
     def enqueue_paths(self, paths: list[str]) -> bool:
         """Send file paths over IPC to running daemon; return True if acknowledged."""
+        pass
+
+    @abstractmethod
+    def notify_settings_updated(self) -> bool:
+        """Signal running daemon to hot-reload persisted UserSettings."""
         pass

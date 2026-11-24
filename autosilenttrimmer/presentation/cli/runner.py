@@ -1,4 +1,4 @@
-"""CLI runner, composition root, IPC dispatch, and daemon lifecycle controller."""
+"""CLI runner, composition root, IPC dispatch, Tune launcher, and daemon lifecycle controller."""
 
 from __future__ import annotations
 
@@ -14,13 +14,6 @@ from autosilenttrimmer.application.use_cases.job_orchestrator import JobOrchestr
 from autosilenttrimmer.application.use_cases.manage_runtime import ManageRuntimeUseCase
 from autosilenttrimmer.application.use_cases.process_media import ProcessMediaUseCase
 from autosilenttrimmer.application.use_cases.system_readiness import SystemReadinessUseCase
-from autosilenttrimmer.core.config import (
-    ExecutionConfig,
-    MediaProcessingConfig,
-    NoiseReductionConfig,
-    UIConfig,
-    VADConfig,
-)
 from autosilenttrimmer.core.constants import APP_NAME, TIER1_VIDEO_EXTENSIONS, VIDEO_EXTENSIONS
 from autosilenttrimmer.core.exceptions import AutoSilentTrimmerException
 from autosilenttrimmer.core.i18n import Localizer, detect_system_language
@@ -42,33 +35,25 @@ from autosilenttrimmer.infrastructure.ipc.gateway import (
     resolve_ipc_address,
 )
 from autosilenttrimmer.infrastructure.media.ffmpeg_locator import ManagedFFmpegLocator
-from autosilenttrimmer.infrastructure.media.ffmpeg_manager import FFmpegMediaManager
 from autosilenttrimmer.infrastructure.media.pyav_prober import PyAVMediaProber
-from autosilenttrimmer.infrastructure.media.pyav_verifier import PyAVMediaVerifier
-from autosilenttrimmer.infrastructure.noise_reduction.factory import NoiseReductionFactory
-from autosilenttrimmer.infrastructure.notify.composite_notifier import CompositeNotifier
-from autosilenttrimmer.infrastructure.notify.desktop_notifier_adapter import DesktopNotifierAdapter
 from autosilenttrimmer.infrastructure.platform.paths import PlatformDirsPaths
-from autosilenttrimmer.infrastructure.platform.priority import PsutilPriorityController
 from autosilenttrimmer.infrastructure.platform.shell.factory import create_shell_integration
 from autosilenttrimmer.infrastructure.runtime.manifest_client import HttpManifestClient
 from autosilenttrimmer.infrastructure.runtime.pack_manager import ManagedRuntimePackManager
 from autosilenttrimmer.infrastructure.storage.job_manifest_repo import JsonJobManifestRepository
 from autosilenttrimmer.infrastructure.storage.settings_repo import JsonSettingsRepository
-from autosilenttrimmer.infrastructure.strategies.auto_silence import AutoSilenceTrimStrategy
-from autosilenttrimmer.infrastructure.strategies.manual_range import ManualRangeTrimStrategy
-from autosilenttrimmer.infrastructure.vad.factory import VADFactory
-from autosilenttrimmer.infrastructure.visualization.timeline_plotter import (
-    MatplotlibTimelinePlotter,
-)
 from autosilenttrimmer.presentation.cli.parser import build_argument_parser
 from autosilenttrimmer.presentation.cli.readiness_presenter import ReadinessPresenter
+from autosilenttrimmer.presentation.cli.runtime_builder import (
+    build_runtime_components,
+    merge_cli_overrides,
+)
 
 logger = logging.getLogger("autosilenttrimmer")
 
 
 def configure_logging(log_dir: str | None = None) -> None:
-    """Configure minimal console and rotating-safe file logging."""
+    """Configure minimal console and file logging."""
     warnings.filterwarnings("ignore")
     handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
     if log_dir:
@@ -91,13 +76,13 @@ def _resolve_shim_executable() -> str:
     return sys.executable
 
 
-def _spawn_detached_daemon(extra_args: list[str] | None = None) -> None:
-    """Launch background daemon without terminal popup window."""
+def _spawn_detached(cli_flags: list[str]) -> None:
+    """Launch detached sibling process cleanly without console window flash."""
     exe = sys.executable
     if getattr(sys, "frozen", False):
-        cmd = [exe, "--daemon", "--tray", *(extra_args or [])]
+        cmd = [exe, *cli_flags]
     else:
-        cmd = [exe, "-m", "autosilenttrimmer", "--daemon", "--tray", *(extra_args or [])]
+        cmd = [exe, "-m", "autosilenttrimmer", *cli_flags]
 
     kwargs: dict[str, object] = {}
     if os.name == "nt":
@@ -109,7 +94,7 @@ def _spawn_detached_daemon(extra_args: list[str] | None = None) -> None:
 
 
 def run_cli(args: list[str] | None = None) -> int:
-    """Run CLI entrypoint handling readiness, setup, shell integration, IPC, daemon, or job."""
+    """Run CLI entrypoint handling Tune, readiness, setup, shell integration, IPC, daemon, or job."""
     paths = PlatformDirsPaths()
     paths.ensure_all_dirs()
     configure_logging(paths.logs_dir)
@@ -118,8 +103,9 @@ def run_cli(args: list[str] | None = None) -> int:
     parsed = parser.parse_args(args)
 
     settings_repo = JsonSettingsRepository(paths.settings_file)
-    settings = settings_repo.load()
-    active_lang = parsed.lang or settings.language or detect_system_language()
+    base_settings = settings_repo.load()
+    effective_settings = merge_cli_overrides(base_settings, parsed)
+    active_lang = parsed.lang or effective_settings.language or detect_system_language()
     localizer = Localizer(active_lang)
     event_bus = InMemoryEventBus()
 
@@ -133,13 +119,14 @@ def run_cli(args: list[str] | None = None) -> int:
     locator = ManagedFFmpegLocator(paths.runtime_packs_dir)
     cap_prober = CrossPlatformCapabilityProber(locator, paths.capabilities_cache_file)
     shell_adapter = create_shell_integration()
+    ipc_addr, ipc_fam = resolve_ipc_address(paths.cache_dir)
 
     try:
         # 1. Pre-flight system readiness check
         if parsed.check:
             diagnostics = [
                 HardwareDiagnostic(),
-                FFmpegDiagnostic(locator, parsed.ffmpeg),
+                FFmpegDiagnostic(locator, effective_settings.ffmpeg_path),
                 EngineDiagnostic(),
                 ProductionReadinessDiagnostic(paths, cap_prober, runtime_mgr, shell_adapter),
             ]
@@ -159,10 +146,22 @@ def run_cli(args: list[str] | None = None) -> int:
             logger.info("Shell context menu removed cleanly.")
             return 0
 
-        # 3. Runtime Pack Setup / Offline Install
+        # 3. PyQt6 Tune Configuration UI (--tune)
+        if parsed.tune:
+            from autosilenttrimmer.presentation.tune.app_entry import run_tune_ui
+
+            return run_tune_ui(
+                settings_repo=settings_repo,
+                settings_file_path=paths.settings_file,
+                gateway_client=LocalIPCClient(ipc_addr, ipc_fam),
+                shell_integration=shell_adapter,
+                shim_executable_path=_resolve_shim_executable(),
+            )
+
+        # 4. Runtime Pack Setup / Offline Install
         if parsed.setup_runtime:
             ManageRuntimeUseCase(runtime_mgr, cap_prober).install_for_current_host(
-                parsed.manifest_url, channel=parsed.channel
+                effective_settings.manifest_url, channel=effective_settings.update_channel
             )
             return 0
 
@@ -171,7 +170,7 @@ def run_cli(args: list[str] | None = None) -> int:
             logger.info("Offline pack installed: %s (%s)", rec.pack_id, rec.install_dir)
             return 0
 
-        # 4. Anonymized Diagnostics Bundle
+        # 5. Anonymized Diagnostics Bundle
         if parsed.export_diagnostics is not None:
             zip_out = parsed.export_diagnostics or None
             saved_zip = ExportDiagnosticsUseCase(
@@ -180,12 +179,11 @@ def run_cli(args: list[str] | None = None) -> int:
             logger.info("Diagnostics ZIP exported: %s", saved_zip)
             return 0
 
-        # 5. Thin client enqueue mode (--enqueue <files>)
-        ipc_addr, ipc_fam = resolve_ipc_address(paths.cache_dir)
+        # 6. Thin client enqueue mode (--enqueue <files>)
         if parsed.enqueue:
             client = LocalIPCClient(ipc_addr, ipc_fam)
             if not client.is_daemon_running():
-                _spawn_detached_daemon()
+                _spawn_detached(["--daemon", "--tray"])
             abs_paths = [os.path.abspath(p) for p in parsed.enqueue]
             if client.enqueue_paths(abs_paths):
                 logger.info("Submitted %d item(s) cleanly to background queue.", len(abs_paths))
@@ -193,97 +191,87 @@ def run_cli(args: list[str] | None = None) -> int:
             logger.error("Could not reach IPC daemon to enqueue paths.")
             return 1
 
-        # 6. Core processing assembly
-        resolved_ffmpeg = locator.locate(parsed.ffmpeg)
-        vad_cfg = VADConfig(
-            engine=parsed.vad,
-            min_silence_gap=parsed.min_silence,
-            pad=parsed.pad,
-        )
-        nr_cfg = NoiseReductionConfig(method=parsed.method)
-        exec_cfg = ExecutionConfig(
-            strategy=parsed.strategy,
-            compute_policy=parsed.gpu_policy,
-            max_workers=parsed.max_workers,
-            background_priority=settings.background_priority,
-        )
-        ui_cfg = UIConfig(
-            language=active_lang,
-            enable_notifications=settings.enable_notifications,
-            generate_visual_artifacts=parsed.visual_plot or settings.generate_visual_artifacts,
-        )
-        config = MediaProcessingConfig(
-            ffmpeg_path=resolved_ffmpeg,
-            vad=vad_cfg,
-            noise_reduction=nr_cfg,
-            execution=exec_cfg,
-            ui=ui_cfg,
-        )
-
-        media_manager = FFmpegMediaManager(resolved_ffmpeg)
-        vad_detector = (
-            VADFactory.create_vad(parsed.vad, config.vad) if parsed.vad != "none" else None
-        )
-        nr_strategy = (
-            NoiseReductionFactory.create_noise_reduction(parsed.method, config.noise_reduction)
-            if parsed.method != "none"
-            else None
-        )
-        visualizer = (
-            MatplotlibTimelinePlotter(config.visualizer)
-            if (ui_cfg.generate_visual_artifacts and vad_detector is not None)
-            else None
-        )
-        trim_strategy = (
-            ManualRangeTrimStrategy()
-            if parsed.strategy == "manual-range"
-            else (
-                AutoSilenceTrimStrategy(vad_detector)
-                if vad_detector is not None
-                else ManualRangeTrimStrategy()
-            )
-        )
-
-        notifier = CompositeNotifier(
-            DesktopNotifierAdapter(localizer, enabled=ui_cfg.enable_notifications),
-            localizer,
+        # 7. Core processing components
+        comps = build_runtime_components(
+            settings=effective_settings,
+            locator=locator,
+            localizer=localizer,
         )
         orchestrator = JobOrchestrator(
-            media_manager=media_manager,
+            media_manager=comps.media_manager,
             media_prober=PyAVMediaProber(),
-            media_verifier=PyAVMediaVerifier(),
-            trim_strategy=trim_strategy,
+            media_verifier=comps.media_verifier,
+            trim_strategy=comps.trim_strategy,
             capability_prober=cap_prober,
             compute_backend=PolicyComputeBackend(cap_prober),
             event_bus=event_bus,
-            config=config,
-            noise_reduction=nr_strategy,
-            visualizer=visualizer,
-            notifier=notifier,
+            config=comps.config,
+            noise_reduction=comps.noise_reduction,
+            visualizer=comps.visualizer,
+            notifier=comps.notifier,
             manifest_repo=JsonJobManifestRepository(paths.jobs_dir),
-            priority_ctrl=PsutilPriorityController(),
+            priority_ctrl=comps.priority_ctrl,
         )
 
-        # 7. Persistent background daemon mode (--daemon [--tray])
+        # 8. Persistent background daemon mode (--daemon [--tray])
         if parsed.daemon:
             orchestrator.start_background_worker()
-            gateway = LocalIPCGateway(ipc_addr, ipc_fam)
+            gateway = LocalIPCGateway(
+                ipc_addr,
+                ipc_fam,
+                coalesce_window_sec=effective_settings.ipc_coalesce_window_sec,
+            )
+            tray_holder: list[object] = []
+
+            def _reload_daemon_settings() -> object:
+                fresh = merge_cli_overrides(settings_repo.load(), parsed)
+                localizer.set_language(fresh.language)
+                fresh_comps = build_runtime_components(
+                    settings=fresh, locator=locator, localizer=localizer
+                )
+                if tray_holder:
+                    fresh_comps.notifier.bind_tray(tray_holder[0])  # type: ignore[arg-type]
+                orchestrator.reconfigure(
+                    config=fresh_comps.config,
+                    media_manager=fresh_comps.media_manager,
+                    media_verifier=fresh_comps.media_verifier,
+                    trim_strategy=fresh_comps.trim_strategy,
+                    noise_reduction=fresh_comps.noise_reduction,
+                    visualizer=fresh_comps.visualizer,
+                    notifier=fresh_comps.notifier,
+                    priority_ctrl=fresh_comps.priority_ctrl,
+                )
+                logger.info(
+                    "Settings hot-reloaded (strategy=%s, vad=%s, nr=%s, lang=%s)",
+                    fresh.trim_strategy,
+                    fresh.vad_engine,
+                    fresh.noise_reduction_method,
+                    fresh.language,
+                )
+                return fresh
 
             def _on_batch(batch_paths: list[str]) -> None:
+                cur = _reload_daemon_settings()
                 cmds = [
                     ProcessMediaCommand(
                         input_path=p,
-                        strategy=parsed.strategy,
-                        vad_method=parsed.vad,
-                        noise_reduction_method=parsed.method,
-                        compute_policy=parsed.gpu_policy,
-                        max_workers=parsed.max_workers,
+                        strategy=cur.trim_strategy,  # type: ignore[attr-defined]
+                        vad_method=cur.vad_engine,  # type: ignore[attr-defined]
+                        noise_reduction_method=cur.noise_reduction_method,  # type: ignore[attr-defined]
+                        min_silence_gap=cur.min_silence_gap,  # type: ignore[attr-defined]
+                        pad=cur.pad,  # type: ignore[attr-defined]
+                        ffmpeg_path=cur.ffmpeg_path,  # type: ignore[attr-defined]
+                        compute_policy=cur.compute_policy,  # type: ignore[attr-defined]
+                        max_workers=cur.max_workers,  # type: ignore[attr-defined]
+                        on_conflict=cur.on_conflict,  # type: ignore[attr-defined]
+                        output_location=cur.output_location,  # type: ignore[attr-defined]
+                        output_naming_template=cur.output_naming_template,  # type: ignore[attr-defined]
                     )
                     for p in batch_paths
                 ]
                 orchestrator.enqueue(cmds)
 
-            gateway.start(_on_batch)
+            gateway.start(_on_batch, on_reload_settings=_reload_daemon_settings)
             stop_requested = False
 
             def _quit_daemon() -> None:
@@ -296,8 +284,10 @@ def run_cli(args: list[str] | None = None) -> int:
                 from autosilenttrimmer.presentation.tray.tray_app import PystrayTrayUI
 
                 tray = PystrayTrayUI(event_bus, localizer)
-                notifier.bind_tray(tray)
+                tray_holder.append(tray)
+                comps.notifier.bind_tray(tray)
                 tray.start(
+                    on_open_tune=lambda: _spawn_detached(["--tune"]),
                     on_pause_toggle=lambda: (
                         orchestrator.resume() if orchestrator.is_paused else orchestrator.pause()
                     ),
@@ -316,31 +306,34 @@ def run_cli(args: list[str] | None = None) -> int:
                 _quit_daemon()
             return 0
 
-        # 8. Standard synchronous single-run execution (-i ... [-o ...])
+        # 9. Standard synchronous single-run execution (-i ... [-o ...])
         if not parsed.input:
-            parser.error("either --check, --daemon, --enqueue, or -i/--input is required")
+            parser.error("either --check, --tune, --daemon, --enqueue, or -i/--input is required")
 
         use_case = ProcessMediaUseCase(
-            media_manager=media_manager,
-            vad_strategy=vad_detector,
-            noise_reduction_strategy=nr_strategy,
-            visualizer=visualizer,
+            media_manager=comps.media_manager,
+            vad_strategy=comps.vad_detector,  # type: ignore[arg-type]
+            noise_reduction_strategy=comps.noise_reduction,
+            visualizer=comps.visualizer,
             capability_prober=cap_prober,
             compute_backend=PolicyComputeBackend(cap_prober),
             event_bus=event_bus,
-            config=config,
+            config=comps.config,
         )
         cmd = ProcessMediaCommand(
             input_path=parsed.input,
             output_path=parsed.output,
-            noise_reduction_method=parsed.method,
-            vad_method=parsed.vad,
-            min_silence_gap=parsed.min_silence,
-            pad=parsed.pad,
-            ffmpeg_path=resolved_ffmpeg,
-            strategy=parsed.strategy,
-            compute_policy=parsed.gpu_policy,
-            max_workers=parsed.max_workers,
+            noise_reduction_method=effective_settings.noise_reduction_method,
+            vad_method=effective_settings.vad_engine,
+            min_silence_gap=effective_settings.min_silence_gap,
+            pad=effective_settings.pad,
+            ffmpeg_path=comps.ffmpeg_path,
+            strategy=effective_settings.trim_strategy,
+            compute_policy=effective_settings.compute_policy,
+            max_workers=effective_settings.max_workers,
+            on_conflict=effective_settings.on_conflict,
+            output_location=effective_settings.output_location,
+            output_naming_template=effective_settings.output_naming_template,
         )
         result = use_case.execute(parsed.input, parsed.output, command=cmd)
 

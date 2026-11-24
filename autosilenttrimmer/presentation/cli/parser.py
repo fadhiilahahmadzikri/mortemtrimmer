@@ -4,21 +4,9 @@ from __future__ import annotations
 
 import argparse
 
-from autosilenttrimmer.core.constants import (
-    DEFAULT_COMPUTE_POLICY,
-    DEFAULT_FFMPEG_EXECUTABLE,
-    DEFAULT_MIN_SILENCE_GAP_SEC,
-    DEFAULT_NOISE_REDUCTION_METHOD,
-    DEFAULT_PAD_SEC,
-    DEFAULT_RELEASE_CHANNEL,
-    DEFAULT_RELEASE_MANIFEST_URL,
-    DEFAULT_TRIM_STRATEGY,
-    DEFAULT_VAD_METHOD,
-)
-
 
 def build_argument_parser() -> argparse.ArgumentParser:
-    """Construct CLI argument parser covering headless CLI, daemon, shell, and runtime pack commands."""
+    """Construct CLI argument parser; omitted tuning flags inherit persisted settings.json."""
     parser = argparse.ArgumentParser(
         description="AutoSilentTrimmer: AI-Powered Silence Remover & Noise Reduction Production Suite"
     )
@@ -28,6 +16,11 @@ def build_argument_parser() -> argparse.ArgumentParser:
         dest="check",
         action="store_true",
         help="Perform comprehensive system readiness diagnostic and exit",
+    )
+    parser.add_argument(
+        "--tune",
+        action="store_true",
+        help="Open the PyQt6 Tune configuration interface",
     )
     parser.add_argument(
         "-i",
@@ -89,14 +82,14 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--manifest-url",
         type=str,
-        default=DEFAULT_RELEASE_MANIFEST_URL,
-        help="Signed release manifest URL or local JSON path",
+        default=None,
+        help="Override release manifest URL or local JSON path (default from settings.json)",
     )
     parser.add_argument(
         "--channel",
         choices=["stable", "beta"],
-        default=DEFAULT_RELEASE_CHANNEL,
-        help=f"Release manifest channel (default: {DEFAULT_RELEASE_CHANNEL})",
+        default=None,
+        help="Override release manifest channel ('stable' or 'beta')",
     )
     parser.add_argument(
         "--export-diagnostics",
@@ -110,26 +103,26 @@ def build_argument_parser() -> argparse.ArgumentParser:
         "-m",
         "--method",
         choices=["none", "spectral", "deepfilter"],
-        default=DEFAULT_NOISE_REDUCTION_METHOD,
-        help=f"Noise reduction method (default: {DEFAULT_NOISE_REDUCTION_METHOD})",
+        default=None,
+        help="Override noise reduction method (default from settings.json)",
     )
     parser.add_argument(
         "--vad",
         choices=["none", "energy", "whisper", "silero"],
-        default=DEFAULT_VAD_METHOD,
-        help=f"Voice Activity Detection engine (default: {DEFAULT_VAD_METHOD})",
+        default=None,
+        help="Override Voice Activity Detection engine (default from settings.json)",
     )
     parser.add_argument(
         "--strategy",
         choices=["auto-silence", "manual-range"],
-        default=DEFAULT_TRIM_STRATEGY,
-        help=f"Trim strategy plugin (default: {DEFAULT_TRIM_STRATEGY})",
+        default=None,
+        help="Override trim strategy plugin (default from settings.json)",
     )
     parser.add_argument(
         "--gpu-policy",
         choices=["g1_hard_gate", "g2_gpu_preferred", "g3_cpu_only"],
-        default=DEFAULT_COMPUTE_POLICY,
-        help=f"Compute backend selection policy (default: {DEFAULT_COMPUTE_POLICY})",
+        default=None,
+        help="Override compute backend policy (default from settings.json)",
     )
     parser.add_argument(
         "--max-workers",
@@ -140,21 +133,21 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--min-silence",
         type=float,
-        default=DEFAULT_MIN_SILENCE_GAP_SEC,
-        help=f"Minimum silence gap in seconds (default: {DEFAULT_MIN_SILENCE_GAP_SEC})",
+        default=None,
+        help="Override minimum silence gap in seconds",
     )
     parser.add_argument(
         "--pad",
         type=float,
-        default=DEFAULT_PAD_SEC,
-        help=f"Audio padding per cut boundary in seconds (default: {DEFAULT_PAD_SEC})",
+        default=None,
+        help="Override audio padding per cut boundary in seconds",
     )
     parser.add_argument(
         "-f",
         "--ffmpeg",
-        default=DEFAULT_FFMPEG_EXECUTABLE,
+        default=None,
         type=str,
-        help="Path to FFmpeg binary executable (default: managed binary or PATH)",
+        help="Override FFmpeg executable path (default from settings.json or auto-managed)",
     )
     parser.add_argument(
         "--lang",
@@ -165,6 +158,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--visual-plot",
         action="store_true",
+        default=None,
         help="Generate speech timeline PNG visualization alongside output",
     )
     return parser

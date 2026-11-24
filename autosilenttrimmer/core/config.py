@@ -17,6 +17,7 @@ from autosilenttrimmer.core.constants import (
     DEFAULT_ENERGY_WINDOW_SEC,
     DEFAULT_FFMPEG_EXECUTABLE,
     DEFAULT_LANGUAGE,
+    DEFAULT_LOW_BATTERY_THRESHOLD_PERCENT,
     DEFAULT_MIN_SILENCE_GAP_SEC,
     DEFAULT_NOISE_REDUCTION_METHOD,
     DEFAULT_ON_CONFLICT,
@@ -37,6 +38,10 @@ from autosilenttrimmer.core.constants import (
     DEFAULT_WHISPER_MAX_WORD_DURATION_SEC,
     DEFAULT_WHISPER_MODEL_SIZE,
     DEFAULT_WHISPER_NO_SPEECH_PROB_THRESHOLD,
+    DEFAULT_X264_CRF,
+    DEFAULT_X264_PRESET,
+    DISK_SPACE_SAFETY_FACTOR,
+    MIN_CHUNKABLE_DURATION_SEC,
     PLOT_COLOR_ACTIVE_SPEECH,
     PLOT_COLOR_BG,
     PLOT_COLOR_DISCARDED,
@@ -45,17 +50,20 @@ from autosilenttrimmer.core.constants import (
     PLOT_FIG_WIDTH,
     TARGET_CHUNK_MAX_SEC,
     TARGET_CHUNK_MIN_SEC,
+    VERIFY_DURATION_TOLERANCE_SEC,
 )
 
 
 @dataclass(frozen=True)
 class AudioConfig:
-    """Audio configuration parameters."""
+    """Audio and video encoding stream configuration parameters."""
 
     sample_rate_deepfilter: int = DEFAULT_SAMPLE_RATE_DEEPFILTER
     sample_rate_vad: int = DEFAULT_SAMPLE_RATE_VAD
     channels_mono: int = DEFAULT_AUDIO_CHANNELS_MONO
     bitrate: str = DEFAULT_AUDIO_BITRATE
+    x264_preset: str = DEFAULT_X264_PRESET
+    x264_crf: str = DEFAULT_X264_CRF
 
 
 @dataclass(frozen=True)
@@ -65,6 +73,7 @@ class VADConfig:
     engine: str = DEFAULT_VAD_METHOD
     min_silence_gap: float = DEFAULT_MIN_SILENCE_GAP_SEC
     pad: float = DEFAULT_PAD_SEC
+    sample_rate_vad: int = DEFAULT_SAMPLE_RATE_VAD
 
     # Energy VAD specific
     energy_window_sec: float = DEFAULT_ENERGY_WINDOW_SEC
@@ -115,9 +124,12 @@ class ExecutionConfig:
     max_workers: int | None = None
     background_priority: bool = True
     pause_on_low_battery: bool = True
+    low_battery_threshold_percent: float = DEFAULT_LOW_BATTERY_THRESHOLD_PERCENT
     target_chunk_min_sec: float = TARGET_CHUNK_MIN_SEC
     target_chunk_max_sec: float = TARGET_CHUNK_MAX_SEC
+    min_chunkable_duration_sec: float = MIN_CHUNKABLE_DURATION_SEC
     chunk_max_retries: int = DEFAULT_CHUNK_MAX_RETRIES
+    verify_duration_tolerance_sec: float = VERIFY_DURATION_TOLERANCE_SEC
     frame_accurate: bool = True
 
 
@@ -129,6 +141,7 @@ class OutputPolicyConfig:
     custom_dir: str | None = None
     naming_template: str = DEFAULT_OUTPUT_NAMING_TEMPLATE
     on_conflict: str = DEFAULT_ON_CONFLICT
+    disk_space_safety_factor: float = DISK_SPACE_SAFETY_FACTOR
 
 
 @dataclass(frozen=True)

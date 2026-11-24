@@ -7,7 +7,7 @@ import logging
 from tqdm import tqdm
 
 from autosilenttrimmer.core.config import VADConfig
-from autosilenttrimmer.core.constants import DEFAULT_SAMPLE_RATE_VAD
+from autosilenttrimmer.core.constants import SUPPORTED_VAD_SAMPLE_RATES
 from autosilenttrimmer.core.exceptions import DependencyMissingException
 from autosilenttrimmer.domain.contracts.vad import IVoiceActivityDetector
 from autosilenttrimmer.domain.entities.segment import MediaSegment
@@ -24,6 +24,12 @@ class SileroBasedVAD(IVoiceActivityDetector):
     def get_keep_segments(
         self, audio_path: str, manifest_path: str | None = None
     ) -> list[MediaSegment]:
+        sr_vad = self._config.sample_rate_vad
+        if sr_vad not in SUPPORTED_VAD_SAMPLE_RATES:
+            raise ValueError(
+                f"Silero VAD supports only sample rates {SUPPORTED_VAD_SAMPLE_RATES}, got {sr_vad}."
+            )
+
         try:
             import torch
         except ImportError as exc:
@@ -40,8 +46,8 @@ class SileroBasedVAD(IVoiceActivityDetector):
         )
         get_speech_timestamps, _, read_audio, _, _ = utils
 
-        logger.info("Reading acoustic wave data...")
-        wav = read_audio(audio_path, sampling_rate=DEFAULT_SAMPLE_RATE_VAD)
+        logger.info("Reading acoustic wave data (%d Hz)...", sr_vad)
+        wav = read_audio(audio_path, sampling_rate=sr_vad)
 
         logger.info("Analyzing voice activity timestamps...")
         min_silence_ms = int(self._config.min_silence_gap * 1000)
@@ -49,7 +55,7 @@ class SileroBasedVAD(IVoiceActivityDetector):
         speech_timestamps = get_speech_timestamps(
             wav,
             model,
-            sampling_rate=DEFAULT_SAMPLE_RATE_VAD,
+            sampling_rate=sr_vad,
             min_silence_duration_ms=min_silence_ms,
             min_speech_duration_ms=self._config.silero_min_speech_duration_ms,
         )
@@ -58,8 +64,8 @@ class SileroBasedVAD(IVoiceActivityDetector):
         manifest_lines: list[str] = []
 
         for seg in tqdm(speech_timestamps, desc="Silero Segmentation", unit=" segment"):
-            start_sec = seg["start"] / float(DEFAULT_SAMPLE_RATE_VAD)
-            end_sec = seg["end"] / float(DEFAULT_SAMPLE_RATE_VAD)
+            start_sec = seg["start"] / float(sr_vad)
+            end_sec = seg["end"] / float(sr_vad)
 
             start_padded = max(0.0, start_sec - self._config.pad)
             end_padded = end_sec + self._config.pad

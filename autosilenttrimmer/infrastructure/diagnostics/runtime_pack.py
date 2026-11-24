@@ -113,4 +113,28 @@ class ProductionReadinessDiagnostic(ISystemDiagnostic):
                 )
             )
 
+        try:
+            from PyQt6.QtCore import PYQT_VERSION_STR
+
+            items.append(
+                ReadinessItem(
+                    component="PyQt6 Tune UI",
+                    category=self.category_name,
+                    status=ReadinessStatus.READY,
+                    detail=f"PyQt6 {PYQT_VERSION_STR} ready (--tune)",
+                    is_critical=False,
+                )
+            )
+        except ImportError:
+            items.append(
+                ReadinessItem(
+                    component="PyQt6 Tune UI",
+                    category=self.category_name,
+                    status=ReadinessStatus.OPTIONAL_MISSING,
+                    detail="PyQt6 not installed (--tune UI unavailable).",
+                    is_critical=False,
+                    remediation="Install PyQt6>=6.7.0 to launch Tune interface.",
+                )
+            )
+
         return items

@@ -49,6 +49,7 @@ class PystrayTrayUI(ITrayUI):
     def start(
         self,
         *,
+        on_open_tune: Callable[[], None],
         on_pause_toggle: Callable[[], None],
         on_cancel_current: Callable[[], None],
         on_export_diagnostics: Callable[[], str],
@@ -96,6 +97,12 @@ class PystrayTrayUI(ITrayUI):
 
         menu = pystray.Menu(
             pystray.MenuItem(lambda _item: self._status_text, None, enabled=False),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem(
+                lambda _item: self._l10n.text("tray.action_tune"),
+                lambda _icon, _item: on_open_tune(),
+                default=True,
+            ),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(
                 lambda _item: self._l10n.text("tray.action_pause"),

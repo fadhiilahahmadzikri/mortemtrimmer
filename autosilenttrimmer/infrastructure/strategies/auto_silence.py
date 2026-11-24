@@ -31,9 +31,19 @@ class AutoSilenceTrimStrategy(ITrimStrategy):
         manifest_path: str | None = None,
         params: dict[str, Any] | None = None,
     ) -> list[MediaSegment]:
-        """Execute VAD analysis on extracted or direct audio to build keep segments."""
+        """Execute VAD analysis on extracted or direct audio to build clamped keep segments."""
         target = audio_path or probe_info.path
         segments = self._vad.get_keep_segments(target, manifest_path=manifest_path)
         if not segments and probe_info.duration_sec > 0.0:
             return []
-        return segments
+        if probe_info.duration_sec <= 0.0:
+            return segments
+
+        clamped: list[MediaSegment] = []
+        for seg in segments:
+            if seg.start >= probe_info.duration_sec:
+                continue
+            clamped_end = min(seg.end, probe_info.duration_sec)
+            if clamped_end > seg.start:
+                clamped.append(MediaSegment(start=seg.start, end=clamped_end))
+        return clamped

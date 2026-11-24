@@ -79,11 +79,15 @@ class OutputPathResolver:
         return os.path.join(out_dir, f".{stem}.{job_id[:8]}.tmp{ext}")
 
     @staticmethod
-    def ensure_disk_space(target_path: str, source_size_bytes: int) -> None:
+    def ensure_disk_space(
+        target_path: str,
+        source_size_bytes: int,
+        safety_factor: float = DISK_SPACE_SAFETY_FACTOR,
+    ) -> None:
         """Pre-flight free disk space check (Doc 01 §7.5)."""
         target_dir = os.path.dirname(os.path.abspath(target_path)) or "."
         usage = shutil.disk_usage(target_dir)
-        required = max(MIN_FREE_DISK_BYTES, int(source_size_bytes * DISK_SPACE_SAFETY_FACTOR))
+        required = max(MIN_FREE_DISK_BYTES, int(source_size_bytes * safety_factor))
         if usage.free < required:
             raise DiskFullException(
                 f"Insufficient disk space in '{target_dir}': "
