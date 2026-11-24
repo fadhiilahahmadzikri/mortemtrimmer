@@ -8,7 +8,7 @@ import sys
 from collections.abc import Callable
 
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -25,6 +25,21 @@ from PyQt6.QtWidgets import (
 
 from autosilenttrimmer.core.constants import APP_NAME
 from autosilenttrimmer.domain.contracts.ipc import IJobGatewayClient
+from autosilenttrimmer.presentation.theme import (
+    STATUS_ERROR_BG,
+    STATUS_ERROR_TEXT,
+    STATUS_OK,
+    STATUS_WARN,
+    TEXT_SECONDARY,
+    resolve_asset_path,
+)
+
+_LOG_LEVEL_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("All Levels", "ALL"),
+    ("Errors", "ERROR"),
+    ("Warnings", "WARNING"),
+    ("Info", "INFO"),
+)
 
 
 def _open_folder_in_os(dir_path: str) -> None:
@@ -83,9 +98,9 @@ class LogViewerWindow(QMainWindow):
         self._last_mtime = -1.0
         self._all_lines: list[str] = []
 
-        self.setWindowTitle(f"System Logs & Activity — {APP_NAME}")
-        self.resize(920, 600)
-        self.setMinimumSize(680, 420)
+        self.setWindowTitle(f"System Logs — {APP_NAME}")
+        self.resize(940, 620)
+        self.setMinimumSize(700, 440)
 
         self._build_ui()
         self.refresh_logs(force=True)
@@ -97,42 +112,59 @@ class LogViewerWindow(QMainWindow):
 
     def _build_ui(self) -> None:
         central = QWidget(self)
+        central.setObjectName("centralRoot")
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
-        root.setContentsMargins(14, 12, 14, 12)
-        root.setSpacing(8)
+        root.setContentsMargins(18, 16, 18, 16)
+        root.setSpacing(10)
 
         # Header & Daemon/Error summary
         top_row = QHBoxLayout()
-        title_lbl = QLabel(f"{APP_NAME} System Logs (Append-Only Preserved)", self)
-        title_lbl.setStyleSheet("font-size: 14px; font-weight: bold;")
-        self._daemon_lbl = QLabel("Background Service: checking...", self)
+        top_row.setSpacing(10)
+        icon_path = resolve_asset_path("mortem_icon.png")
+        if icon_path is not None:
+            emblem = QLabel(self)
+            emblem.setPixmap(
+                QPixmap(icon_path).scaled(
+                    24,
+                    24,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+            top_row.addWidget(emblem)
+
+        title_lbl = QLabel(f"{APP_NAME} System Logs", self)
+        title_lbl.setObjectName("headerTitle")
+        self._daemon_lbl = QLabel("Background Service: Checking...", self)
         self._daemon_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         top_row.addWidget(title_lbl)
         top_row.addStretch(1)
         top_row.addWidget(self._daemon_lbl)
         root.addLayout(top_row)
 
-        self._meta_lbl = QLabel(f"File: {self._log_path}", self)
-        self._meta_lbl.setStyleSheet("color: #9aa3b2; font-size: 11px;")
+        self._meta_lbl = QLabel(f"History preserved automatically  •  {self._log_path}", self)
+        self._meta_lbl.setObjectName("headerSubtitle")
+        self._meta_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px;")
         root.addWidget(self._meta_lbl)
 
         self._error_banner = QLabel("No recorded errors.", self)
         self._error_banner.setWordWrap(True)
-        self._error_banner.setStyleSheet("font-weight: bold; padding: 4px 0px;")
         root.addWidget(self._error_banner)
 
         # Filter controls row
         ctrl_row = QHBoxLayout()
+        ctrl_row.setSpacing(8)
         self._level_combo = QComboBox(self)
-        self._level_combo.addItems(["ALL", "ERROR", "WARNING", "INFO"])
-        self._level_combo.currentTextChanged.connect(lambda _t: self._render_filtered())
+        for display_text, level_key in _LOG_LEVEL_OPTIONS:
+            self._level_combo.addItem(display_text, level_key)
+        self._level_combo.currentIndexChanged.connect(lambda _idx: self._render_filtered())
 
         self._search_edit = QLineEdit(self)
-        self._search_edit.setPlaceholderText("Filter by filename, job ID, or error message...")
+        self._search_edit.setPlaceholderText("Filter by filename, job ID, or message...")
         self._search_edit.textChanged.connect(lambda _t: self._render_filtered())
 
-        self._auto_refresh_cb = QCheckBox("Live Auto-Refresh (1s)", self)
+        self._auto_refresh_cb = QCheckBox("Live Refresh (1s)", self)
         self._auto_refresh_cb.setChecked(True)
         self._auto_scroll_cb = QCheckBox("Auto-Scroll", self)
         self._auto_scroll_cb.setChecked(True)
@@ -155,9 +187,10 @@ class LogViewerWindow(QMainWindow):
 
         # Footer action bar (intentionally read-only: zero truncate/delete actions)
         footer = QHBoxLayout()
-        refresh_btn = QPushButton("Refresh Now", self)
-        folder_btn = QPushButton("Open Logs Folder", self)
-        copy_btn = QPushButton("Copy Visible Logs", self)
+        footer.setSpacing(8)
+        refresh_btn = QPushButton("Refresh", self)
+        folder_btn = QPushButton("Open Folder", self)
+        copy_btn = QPushButton("Copy Logs", self)
         close_btn = QPushButton("Close", self)
 
         refresh_btn.clicked.connect(lambda: self.refresh_logs(force=True))
@@ -169,7 +202,7 @@ class LogViewerWindow(QMainWindow):
         footer.addWidget(folder_btn)
         footer.addWidget(copy_btn)
         if self._on_open_tune is not None:
-            tune_btn = QPushButton("Open Tune Settings", self)
+            tune_btn = QPushButton("Open Settings", self)
             tune_btn.clicked.connect(self._on_open_tune)
             footer.addWidget(tune_btn)
         footer.addStretch(1)
@@ -186,9 +219,9 @@ class LogViewerWindow(QMainWindow):
 
         if not os.path.isfile(self._log_path):
             self._all_lines = []
-            self._meta_lbl.setText(f"File: {self._log_path} (no entries yet)")
+            self._meta_lbl.setText(f"Log file: {self._log_path} (no entries yet)")
             self._error_banner.setText("No recorded errors.")
-            self._error_banner.setStyleSheet("color: #00e676; font-weight: bold;")
+            self._error_banner.setStyleSheet(f"color: {STATUS_OK}; font-weight: 600;")
             self._text_view.setPlainText("(Waiting for application log entries...)")
             return
 
@@ -201,37 +234,44 @@ class LogViewerWindow(QMainWindow):
         self._all_lines = read_preserved_log_lines(self._log_path)
         size_kb = stat.st_size / 1024.0
         self._meta_lbl.setText(
-            f"File: {self._log_path} | Lines: {len(self._all_lines)} | Size: {size_kb:.1f} KB"
+            f"Log file: {self._log_path}  •  Lines: {len(self._all_lines)}  •  Size: {size_kb:.1f} KB"
         )
         self._update_latest_error_banner()
         self._render_filtered()
 
     def _update_daemon_badge(self) -> None:
         if self._gateway is None:
-            self._daemon_lbl.setText("Background Service: N/A")
+            self._daemon_lbl.setText("Background Service: Unavailable")
+            self._daemon_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; font-weight: 600;")
             return
         running = self._gateway.is_daemon_running()
         if running:
             self._daemon_lbl.setText("Background Service: Running")
-            self._daemon_lbl.setStyleSheet("color: #00e676; font-weight: bold;")
+            self._daemon_lbl.setStyleSheet(f"color: {STATUS_OK}; font-weight: 600;")
         else:
             self._daemon_lbl.setText("Background Service: Stopped")
-            self._daemon_lbl.setStyleSheet("color: #ffca28; font-weight: bold;")
+            self._daemon_lbl.setStyleSheet(f"color: {STATUS_WARN}; font-weight: 600;")
 
     def _update_latest_error_banner(self) -> None:
         errors = [ln for ln in self._all_lines if "[ERROR]" in ln or "[CRITICAL]" in ln]
         if errors:
             latest = errors[-1]
             self._error_banner.setText(f"Latest Error ({len(errors)} total): {latest}")
-            self._error_banner.setStyleSheet("color: #ff6b6b; font-weight: bold;")
+            self._error_banner.setStyleSheet(
+                f"background-color: {STATUS_ERROR_BG}; color: {STATUS_ERROR_TEXT}; "
+                "border-radius: 5px; padding: 6px 10px; font-weight: 600;"
+            )
         else:
-            self._error_banner.setText("Status: No errors recorded in preserved logs.")
-            self._error_banner.setStyleSheet("color: #00e676; font-weight: bold;")
+            self._error_banner.setText(
+                "Status: All quiet — zero errors recorded in preserved logs."
+            )
+            self._error_banner.setStyleSheet(f"color: {STATUS_OK}; font-weight: 600;")
 
     def _render_filtered(self) -> None:
+        level_key = str(self._level_combo.currentData() or self._level_combo.currentText() or "ALL")
         filtered = filter_log_lines(
             self._all_lines,
-            self._level_combo.currentText(),
+            level_key,
             self._search_edit.text(),
         )
         sb = self._text_view.verticalScrollBar()

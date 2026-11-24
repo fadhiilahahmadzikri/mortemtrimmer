@@ -91,31 +91,35 @@ def build_field_control(
     if spec.control_type == ControlType.CHOICE:
         combo = QComboBox(parent)
         combo.setToolTip(spec.description)
-        combo.addItems(list(spec.choices))
-        combo.currentTextChanged.connect(lambda _txt: on_changed())
+        for choice in spec.choices:
+            combo.addItem(spec.display_for_choice(choice), choice)
+        combo.currentIndexChanged.connect(lambda _idx: on_changed())
 
         def _set_choice(val: Any) -> None:
             txt = str(val) if val is not None else str(spec.default)
-            idx = combo.findText(txt)
+            idx = combo.findData(txt)
+            if idx < 0:
+                idx = combo.findText(txt)
             if idx >= 0:
                 combo.setCurrentIndex(idx)
 
         return BoundFieldControl(
             spec=spec,
             widget=combo,
-            getter=combo.currentText,
+            getter=lambda: str(combo.currentData() or combo.currentText()),
             setter=_set_choice,
         )
 
     if spec.control_type in {ControlType.PATH_DIR, ControlType.PATH_FILE}:
         container = QWidget(parent)
+        container.setObjectName("fieldContainer")
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
         line = QLineEdit(container)
         line.setToolTip(spec.description)
-        line.setPlaceholderText("(auto)")
+        line.setPlaceholderText("Automatic (leave blank)")
         line.textChanged.connect(lambda _txt: on_changed())
 
         browse_btn = QPushButton("Browse...", container)

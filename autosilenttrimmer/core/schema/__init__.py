@@ -7,11 +7,11 @@ from enum import StrEnum
 from typing import Any
 
 TUNE_TABS: tuple[str, ...] = (
-    "General & Pipeline",
-    "VAD & Engines",
-    "Encoder & Chunking",
-    "Output & Paths",
-    "System & Runtime",
+    "General",
+    "Speech and Audio",
+    "Encoding and Speed",
+    "Files and Output",
+    "System and Updates",
 )
 
 
@@ -29,7 +29,7 @@ class ControlType(StrEnum):
 
 @dataclass(frozen=True)
 class SettingFieldSpec:
-    """Declarative metadata binding domain UserSettings to technical Tune UI controls."""
+    """Declarative metadata binding domain UserSettings to clean UI controls."""
 
     key: str
     tab: str
@@ -43,7 +43,13 @@ class SettingFieldSpec:
     step: float | int | None = None
     decimals: int = 2
     choices: tuple[str, ...] = ()
+    choice_labels: tuple[tuple[str, str], ...] = ()
     special_zero_label: str | None = None
+
+    def display_for_choice(self, value: str) -> str:
+        """Return polished user-facing label for a persisted choice value."""
+        mapping = dict(self.choice_labels)
+        return mapping.get(value, value.replace("_", " ").replace("-", " ").title())
 
 
 __all__ = ["TUNE_TABS", "ControlType", "SettingFieldSpec"]

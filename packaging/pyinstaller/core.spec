@@ -31,8 +31,14 @@ EXCLUDES = [
     "PyQt6.QtTest",
 ]
 
-DATAS = []
+DATAS = [
+    (
+        os.path.join(ROOT_DIR, "autosilenttrimmer", "presentation", "assets"),
+        os.path.join("autosilenttrimmer", "presentation", "assets"),
+    ),
+]
 BINARIES = []
+APP_ICON = os.path.join(ROOT_DIR, "packaging", "windows", "mortem.ico")
 HIDDENIMPORTS = [
     "pystray._win32",
     "desktop_notifier.backends.winrt",
@@ -113,6 +119,7 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
+    icon=APP_ICON,
 )
 
 cli_exe = EXE(
@@ -128,6 +135,7 @@ cli_exe = EXE(
     console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
+    icon=APP_ICON,
 )
 
 coll = COLLECT(

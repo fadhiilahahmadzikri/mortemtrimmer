@@ -6,7 +6,9 @@ import logging
 
 from autosilenttrimmer.core.config import VisualizerConfig
 from autosilenttrimmer.core.constants import (
+    PLOT_COLOR_GRID,
     PLOT_COLOR_LEGEND_BG,
+    PLOT_COLOR_TEXT,
     PLOT_STYLE_THEME,
     PLOT_SUFFIX,
     PLOT_THEME_RC,
@@ -74,8 +76,8 @@ class MatplotlibTimelinePlotter(IVisualizer):
             handles=[speech_patch, silence_patch],
             loc="upper right",
             facecolor=PLOT_COLOR_LEGEND_BG,
-            edgecolor="#333333",
-            labelcolor="white",
+            edgecolor=PLOT_COLOR_GRID,
+            labelcolor=PLOT_COLOR_TEXT,
         )
 
         plt.tight_layout()

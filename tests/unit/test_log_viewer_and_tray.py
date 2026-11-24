@@ -134,15 +134,15 @@ def test_pyqt6_log_viewer_preserves_logs_filters_and_tails_offscreen(tmp_path: P
     assert "PyTorch missing" in win._text_view.toPlainText()
     assert log_file.read_bytes() == before_bytes
 
-    # Filter ERROR level cleanly in memory without touching disk log
-    win._level_combo.setCurrentText("ERROR")
+    # Filter Errors level cleanly in memory without touching disk log
+    win._level_combo.setCurrentText("Errors")
     rendered = win._text_view.toPlainText()
     assert "PyTorch missing" in rendered
     assert "IPC batch" not in rendered
     assert log_file.read_bytes() == before_bytes
 
     # Append a new line on disk and confirm refresh picks it up while keeping prior history
-    win._level_combo.setCurrentText("ALL")
+    win._level_combo.setCurrentText("All Levels")
     with open(log_file, "a", encoding="utf-8") as f:
         f.write("2026-11-24 21:25:00,000 [INFO] [pid:100] New trimmed output ready\n")
     win.refresh_logs(force=True)

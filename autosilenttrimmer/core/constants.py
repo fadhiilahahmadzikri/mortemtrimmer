@@ -5,10 +5,12 @@ from __future__ import annotations
 from types import MappingProxyType
 
 # Application identity
-APP_NAME: str = "Trim This Video"
+APP_SHORT_NAME: str = "Mortem"
+APP_NAME: str = "Mortem Primer"
+SHELL_CONTEXT_MENU_LABEL: str = "Trim This Video"
 APP_SLUG: str = "autosilenttrimmer"
 APP_VERSION: str = "1.0.0"
-APP_USER_MODEL_ID: str = "AutoSilentTrimmer.DesktopApp.1"
+APP_USER_MODEL_ID: str = "MortemPrimer.DesktopApp.1"
 DEFAULT_LANGUAGE: str = "en"
 SUPPORTED_LANGUAGES: frozenset[str] = frozenset({"en", "id"})
 
@@ -142,12 +144,12 @@ ETA_SMOOTHING_ALPHA: float = 0.3
 
 # Scientific plot styling
 PLOT_STYLE_THEME: str = "darkgrid"
-PLOT_COLOR_BG: str = "#121212"
-PLOT_COLOR_GRID: str = "#333333"
-PLOT_COLOR_TEXT: str = "white"
-PLOT_COLOR_ACTIVE_SPEECH: str = "#00e676"
-PLOT_COLOR_DISCARDED: str = "#2c2c2c"
-PLOT_COLOR_LEGEND_BG: str = "#1e1e1e"
+PLOT_COLOR_BG: str = "#14100E"
+PLOT_COLOR_GRID: str = "#3A2B20"
+PLOT_COLOR_TEXT: str = "#F4EAD5"
+PLOT_COLOR_ACTIVE_SPEECH: str = "#E2A634"
+PLOT_COLOR_DISCARDED: str = "#292019"
+PLOT_COLOR_LEGEND_BG: str = "#1E1713"
 PLOT_DEFAULT_DPI: int = 300
 PLOT_FIG_WIDTH: float = 16.0
 PLOT_FIG_HEIGHT: float = 4.0

@@ -14,7 +14,11 @@ from autosilenttrimmer.application.use_cases.job_orchestrator import JobOrchestr
 from autosilenttrimmer.application.use_cases.manage_runtime import ManageRuntimeUseCase
 from autosilenttrimmer.application.use_cases.process_media import ProcessMediaUseCase
 from autosilenttrimmer.application.use_cases.system_readiness import SystemReadinessUseCase
-from autosilenttrimmer.core.constants import APP_NAME, TIER1_VIDEO_EXTENSIONS, VIDEO_EXTENSIONS
+from autosilenttrimmer.core.constants import (
+    SHELL_CONTEXT_MENU_LABEL,
+    TIER1_VIDEO_EXTENSIONS,
+    VIDEO_EXTENSIONS,
+)
 from autosilenttrimmer.core.exceptions import AutoSilentTrimmerException
 from autosilenttrimmer.core.i18n import Localizer, detect_system_language
 from autosilenttrimmer.domain.models.processing_command import ProcessMediaCommand
@@ -148,7 +152,9 @@ def run_cli(args: list[str] | None = None) -> int:
         # 2. Shell right-click registration / cleanup
         if parsed.register_shell:
             target_exe = _resolve_shim_executable()
-            shell_adapter.register(target_exe, APP_NAME, TIER1_VIDEO_EXTENSIONS | VIDEO_EXTENSIONS)
+            shell_adapter.register(
+                target_exe, SHELL_CONTEXT_MENU_LABEL, TIER1_VIDEO_EXTENSIONS | VIDEO_EXTENSIONS
+            )
             logger.info("Shell context menu registered targeting: %s", target_exe)
             return 0
 

@@ -1,4 +1,4 @@
-"""Lightweight 'Hex Flow' Tkinter progress overlay popup (Doc 01 A2)."""
+"""Lightweight gold-and-warm-brown Tkinter progress overlay popup for Mortem Primer."""
 
 from __future__ import annotations
 
@@ -20,6 +20,22 @@ from autosilenttrimmer.domain.models.events import (
     JobStarted,
     ProgressUpdated,
 )
+from autosilenttrimmer.presentation.theme import (
+    ACCENT_GOLD,
+    ACCENT_GOLD_BRIGHT,
+    BG_BASE,
+    BG_DEEP,
+    BG_ELEVATED,
+    BORDER_STRONG,
+    BORDER_SUBTLE,
+    STATUS_ERROR,
+    STATUS_ERROR_BG,
+    STATUS_ERROR_TEXT,
+    TEXT_PRIMARY,
+    TEXT_SECONDARY,
+    format_error_code_label,
+    format_stage_label,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +52,7 @@ def _format_eta(seconds: float | None) -> str:
 
 
 class MinimalProgressPopup:
-    """Thread-safe unobtrusive bottom-right progress widget without a heavy main window."""
+    """Thread-safe unobtrusive bottom-right progress overlay without a heavy main window."""
 
     def __init__(
         self,
@@ -56,11 +72,11 @@ class MinimalProgressPopup:
         self._paused = False
 
     def push_event(self, event: DomainEvent) -> None:
-        """Queue domain progress/terminal events safely from any worker thread."""
+        """Queue domain progress and terminal events safely from any worker thread."""
         self._queue.put(event)
 
     def start(self) -> None:
-        """Start UI widget thread safely; turns into clean no-op if display is unavailable."""
+        """Start UI widget thread cleanly; becomes no-op if display is unavailable."""
         if self._thread is not None and self._thread.is_alive():
             return
         self._stop.clear()
@@ -88,29 +104,41 @@ class MinimalProgressPopup:
         root.title(self._l10n.text("popup.title"))
         root.overrideredirect(True)
         root.attributes("-topmost", True)
-        root.configure(bg="#1a1c23")
+        root.configure(bg=BG_BASE)
 
-        width, height = 390, 148
+        width, height = 400, 152
         scr_w = root.winfo_screenwidth()
         scr_h = root.winfo_screenheight()
         root.geometry(f"{width}x{height}+{scr_w - width - 20}+{scr_h - height - 60}")
         root.withdraw()
 
+        style = ttk.Style(root)
+        style.theme_use("clam")
+        style.configure(
+            "Mortem.Horizontal.TProgressbar",
+            troughcolor=BG_DEEP,
+            background=ACCENT_GOLD,
+            bordercolor=BORDER_SUBTLE,
+            lightcolor=ACCENT_GOLD_BRIGHT,
+            darkcolor=BORDER_STRONG,
+            thickness=8,
+        )
+
         frame = tk.Frame(
             root,
-            bg="#1a1c23",
+            bg=BG_BASE,
             padx=14,
-            pady=10,
+            pady=12,
             highlightthickness=1,
-            highlightbackground="#333845",
+            highlightbackground=BORDER_STRONG,
         )
         frame.pack(fill=tk.BOTH, expand=True)
 
         title_lbl = tk.Label(
             frame,
             text=self._l10n.text("popup.title"),
-            fg="#ffffff",
-            bg="#1a1c23",
+            fg=TEXT_PRIMARY,
+            bg=BG_BASE,
             font=("Segoe UI", 10, "bold"),
             anchor="w",
         )
@@ -119,23 +147,32 @@ class MinimalProgressPopup:
         meta_lbl = tk.Label(
             frame,
             text="",
-            fg="#a0a8b8",
-            bg="#1a1c23",
+            fg=TEXT_SECONDARY,
+            bg=BG_BASE,
             font=("Segoe UI", 8),
             anchor="w",
             justify=tk.LEFT,
-            wraplength=358,
+            wraplength=366,
         )
-        meta_lbl.pack(fill=tk.X, pady=(2, 6))
+        meta_lbl.pack(fill=tk.X, pady=(3, 8))
 
-        bar = ttk.Progressbar(frame, mode="determinate", maximum=100.0)
-        bar.pack(fill=tk.X, pady=(0, 8))
+        bar = ttk.Progressbar(
+            frame,
+            mode="determinate",
+            maximum=100.0,
+            style="Mortem.Horizontal.TProgressbar",
+        )
+        bar.pack(fill=tk.X, pady=(0, 10))
 
-        btn_row = tk.Frame(frame, bg="#1a1c23")
+        btn_row = tk.Frame(frame, bg=BG_BASE)
         btn_row.pack(fill=tk.X)
 
         status_lbl = tk.Label(
-            btn_row, text="0%", fg="#00e676", bg="#1a1c23", font=("Segoe UI", 9, "bold")
+            btn_row,
+            text="0%",
+            fg=ACCENT_GOLD_BRIGHT,
+            bg=BG_BASE,
+            font=("Segoe UI", 9, "bold"),
         )
         status_lbl.pack(side=tk.LEFT)
 
@@ -150,10 +187,13 @@ class MinimalProgressPopup:
             btn_row,
             text=self._l10n.text("popup.cancel"),
             command=_dismiss_or_cancel,
-            bg="#3b2328",
-            fg="#ff8a80",
+            bg=STATUS_ERROR_BG,
+            fg=STATUS_ERROR_TEXT,
+            activebackground=BORDER_STRONG,
+            activeforeground=TEXT_PRIMARY,
             relief=tk.FLAT,
-            padx=8,
+            padx=10,
+            pady=2,
             font=("Segoe UI", 8),
         )
         cancel_btn.pack(side=tk.RIGHT, padx=(6, 0))
@@ -162,10 +202,13 @@ class MinimalProgressPopup:
             btn_row,
             text=self._l10n.text("popup.logs"),
             command=lambda: self._on_open_logs() if self._on_open_logs else None,
-            bg="#262b36",
-            fg="#90caf9",
+            bg=BG_ELEVATED,
+            fg=ACCENT_GOLD_BRIGHT,
+            activebackground=BORDER_STRONG,
+            activeforeground=TEXT_PRIMARY,
             relief=tk.FLAT,
-            padx=8,
+            padx=10,
+            pady=2,
             font=("Segoe UI", 8),
         )
         if self._on_open_logs is not None:
@@ -174,10 +217,13 @@ class MinimalProgressPopup:
         pause_btn = tk.Button(
             btn_row,
             text=self._l10n.text("popup.pause"),
-            bg="#262b36",
-            fg="#ffffff",
+            bg=BG_ELEVATED,
+            fg=TEXT_PRIMARY,
+            activebackground=BORDER_STRONG,
+            activeforeground=TEXT_PRIMARY,
             relief=tk.FLAT,
-            padx=8,
+            padx=10,
+            pady=2,
             font=("Segoe UI", 8),
         )
 
@@ -210,29 +256,33 @@ class MinimalProgressPopup:
                     title_lbl.configure(
                         text=os.path.basename(ev.source_path) or self._l10n.text("popup.title")
                     )
-                    stage = "QUEUED" if isinstance(ev, JobQueued) else "STARTING"
+                    stage_name = format_stage_label(
+                        "QUEUED" if isinstance(ev, JobQueued) else "STARTING"
+                    )
                     meta_lbl.configure(
-                        text=self._l10n.text("popup.queued", stage=stage), fg="#a0a8b8"
+                        text=self._l10n.text("popup.queued", stage=stage_name),
+                        fg=TEXT_SECONDARY,
                     )
                     bar["value"] = 2.0
-                    status_lbl.configure(text="2%", fg="#00e676")
+                    status_lbl.configure(text="2%", fg=ACCENT_GOLD_BRIGHT)
                     cancel_btn.configure(text=self._l10n.text("popup.cancel"))
                 elif isinstance(ev, ProgressUpdated):
                     error_hide_at[0] = 0.0
                     root.deiconify()
                     root.lift()
                     title_lbl.configure(text=ev.filename or self._l10n.text("popup.title"))
+                    clean_label = format_stage_label(ev.backend_label)
                     if ev.eta_seconds is None:
-                        meta_text = self._l10n.text("popup.stage", stage=ev.backend_label)
+                        meta_text = self._l10n.text("popup.stage", stage=clean_label)
                     else:
                         eta_str = _format_eta(ev.eta_seconds)
                         meta_text = (
                             f"{self._l10n.text('popup.eta', eta=eta_str)}  |  "
-                            f"{self._l10n.text('popup.backend', backend=ev.backend_label)}"
+                            f"{self._l10n.text('popup.backend', backend=clean_label)}"
                         )
-                    meta_lbl.configure(text=meta_text, fg="#a0a8b8")
+                    meta_lbl.configure(text=meta_text, fg=TEXT_SECONDARY)
                     bar["value"] = ev.percent
-                    status_lbl.configure(text=f"{ev.percent:.0f}%", fg="#00e676")
+                    status_lbl.configure(text=f"{ev.percent:.0f}%", fg=ACCENT_GOLD_BRIGHT)
                     cancel_btn.configure(text=self._l10n.text("popup.cancel"))
                 elif isinstance(ev, JobFailed):
                     self._paused = False
@@ -246,12 +296,12 @@ class MinimalProgressPopup:
                     meta_lbl.configure(
                         text=self._l10n.text(
                             "popup.failed",
-                            code=ev.error_code or "FAILED",
+                            code=format_error_code_label(ev.error_code or ""),
                             message=short_msg,
                         ),
-                        fg="#ff8a80",
+                        fg=STATUS_ERROR_TEXT,
                     )
-                    status_lbl.configure(text="FAILED", fg="#ff5252")
+                    status_lbl.configure(text="Failed", fg=STATUS_ERROR)
                     cancel_btn.configure(text=self._l10n.text("popup.dismiss"))
                     error_hide_at[0] = time.monotonic() + 25.0
                 elif isinstance(ev, (JobCompleted, JobCancelled)):

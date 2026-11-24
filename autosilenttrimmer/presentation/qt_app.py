@@ -5,25 +5,42 @@ from __future__ import annotations
 import sys
 from collections.abc import Callable
 
-from PyQt6.QtGui import QColor, QPalette
+from PyQt6.QtGui import QColor, QIcon, QPalette
 from PyQt6.QtNetwork import QLocalServer, QLocalSocket
 from PyQt6.QtWidgets import QApplication, QMainWindow
 
+from autosilenttrimmer.presentation.theme import (
+    PALETTE_ALT_BASE_RGB,
+    PALETTE_BASE_RGB,
+    PALETTE_BUTTON_RGB,
+    PALETTE_HIGHLIGHT_RGB,
+    PALETTE_HIGHLIGHT_TEXT_RGB,
+    PALETTE_WINDOW_RGB,
+    PALETTE_WINDOW_TEXT_RGB,
+    build_qt_stylesheet,
+    resolve_asset_path,
+)
+
 
 def apply_dark_palette(app: QApplication) -> None:
-    """Apply crisp minimal dark Fusion palette uniformly across desktop windows."""
+    """Apply gold-and-warm-brown Mortem Primer theme uniformly across PyQt6 windows."""
     app.setStyle("Fusion")
     pal = QPalette()
-    pal.setColor(QPalette.ColorRole.Window, QColor(28, 31, 38))
-    pal.setColor(QPalette.ColorRole.WindowText, QColor(235, 238, 245))
-    pal.setColor(QPalette.ColorRole.Base, QColor(20, 22, 28))
-    pal.setColor(QPalette.ColorRole.AlternateBase, QColor(34, 38, 46))
-    pal.setColor(QPalette.ColorRole.Text, QColor(235, 238, 245))
-    pal.setColor(QPalette.ColorRole.Button, QColor(42, 46, 56))
-    pal.setColor(QPalette.ColorRole.ButtonText, QColor(235, 238, 245))
-    pal.setColor(QPalette.ColorRole.Highlight, QColor(0, 200, 105))
-    pal.setColor(QPalette.ColorRole.HighlightedText, QColor(12, 14, 18))
+    pal.setColor(QPalette.ColorRole.Window, QColor(*PALETTE_WINDOW_RGB))
+    pal.setColor(QPalette.ColorRole.WindowText, QColor(*PALETTE_WINDOW_TEXT_RGB))
+    pal.setColor(QPalette.ColorRole.Base, QColor(*PALETTE_BASE_RGB))
+    pal.setColor(QPalette.ColorRole.AlternateBase, QColor(*PALETTE_ALT_BASE_RGB))
+    pal.setColor(QPalette.ColorRole.Text, QColor(*PALETTE_WINDOW_TEXT_RGB))
+    pal.setColor(QPalette.ColorRole.Button, QColor(*PALETTE_BUTTON_RGB))
+    pal.setColor(QPalette.ColorRole.ButtonText, QColor(*PALETTE_WINDOW_TEXT_RGB))
+    pal.setColor(QPalette.ColorRole.Highlight, QColor(*PALETTE_HIGHLIGHT_RGB))
+    pal.setColor(QPalette.ColorRole.HighlightedText, QColor(*PALETTE_HIGHLIGHT_TEXT_RGB))
     app.setPalette(pal)
+    app.setStyleSheet(build_qt_stylesheet())
+
+    icon_path = resolve_asset_path("mortem_icon.png")
+    if icon_path is not None:
+        app.setWindowIcon(QIcon(icon_path))
 
 
 def run_single_instance_window(ipc_name: str, window_factory: Callable[[], QMainWindow]) -> int:

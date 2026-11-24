@@ -169,7 +169,7 @@ function Invoke-StagePackage {
     $issPath = Join-Path $RepoRoot "packaging\windows\installer.iss"
     Invoke-Checked "Compile Inno Setup installer" $iscc @($issPath)
 
-    $installerPath = Join-Path $RepoRoot "dist\installer\TrimThisVideo-Setup-$version-win-x64.exe"
+    $installerPath = Join-Path $RepoRoot "dist\installer\MortemPrimer-Setup-$version-win-x64.exe"
     if (-not (Test-Path $installerPath)) {
         throw "Expected installer executable not created: $installerPath"
     }
@@ -194,7 +194,7 @@ function Invoke-StageSmoke {
     )
 
     $version = Get-ProjectVersion -Py $Py
-    $installerPath = Join-Path $RepoRoot "dist\installer\TrimThisVideo-Setup-$version-win-x64.exe"
+    $installerPath = Join-Path $RepoRoot "dist\installer\MortemPrimer-Setup-$version-win-x64.exe"
     if (-not (Test-Path $installerPath)) {
         throw "Installer not found for silent install smoke test: $installerPath"
     }

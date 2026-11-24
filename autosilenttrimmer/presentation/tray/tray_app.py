@@ -21,6 +21,7 @@ from autosilenttrimmer.domain.models.events import (
     JobStarted,
     ProgressUpdated,
 )
+from autosilenttrimmer.presentation.theme import format_error_code_label, resolve_asset_path
 from autosilenttrimmer.presentation.tray.progress_popup import MinimalProgressPopup
 from PIL import Image, ImageDraw
 
@@ -28,13 +29,17 @@ logger = logging.getLogger(__name__)
 
 
 def _create_tray_icon_image() -> Image.Image:
-    """Generate clean crisp tray emblem bitmap programmatically (zero asset dependency)."""
-    img = Image.new("RGBA", (64, 64), (24, 28, 36, 255))
+    """Load the Mortem Primer blade emblem bitmap or draw a gold-and-brown fallback."""
+    tray_asset = resolve_asset_path("mortem_tray.png")
+    if tray_asset is not None:
+        return Image.open(tray_asset).convert("RGBA")
+
+    img = Image.new("RGBA", (64, 64), (22, 18, 15, 255))
     draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle([4, 4, 60, 60], radius=12, outline=(0, 230, 118, 255), width=3)
-    draw.rectangle([16, 26, 24, 38], fill=(0, 230, 118, 255))
-    draw.rectangle([28, 16, 36, 48], fill=(0, 230, 118, 255))
-    draw.rectangle([40, 22, 48, 42], fill=(0, 230, 118, 255))
+    draw.rounded_rectangle([4, 4, 60, 60], radius=12, outline=(217, 154, 43, 255), width=3)
+    draw.rectangle([16, 26, 24, 38], fill=(217, 154, 43, 255))
+    draw.rectangle([28, 16, 36, 48], fill=(243, 192, 91, 255))
+    draw.rectangle([40, 22, 48, 42], fill=(217, 154, 43, 255))
     return img
 
 
@@ -99,7 +104,7 @@ class PystrayTrayUI(ITrayUI):
                 self._status_text = self._l10n.text(
                     "tray.status_failed",
                     filename=os.path.basename(event.source_path),
-                    error_code=event.error_code or "FAILED",
+                    error_code=format_error_code_label(event.error_code or ""),
                 )
             elif isinstance(event, JobCancelled):
                 self._status_text = self._l10n.text("tray.status_idle")
@@ -156,7 +161,7 @@ class PystrayTrayUI(ITrayUI):
         )
 
         self._icon = pystray.Icon(
-            "TrimThisVideo",
+            "MortemPrimer",
             _create_tray_icon_image(),
             title=self._status_text,
             menu=menu,

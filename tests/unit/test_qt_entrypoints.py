@@ -7,10 +7,19 @@ import uuid
 from pathlib import Path
 
 import pytest
+from autosilenttrimmer.core.constants import APP_NAME, APP_SHORT_NAME, SHELL_CONTEXT_MENU_LABEL
+from autosilenttrimmer.core.settings_schema import SETTINGS_SCHEMA, ControlType
 from autosilenttrimmer.infrastructure.storage.settings_repo import JsonSettingsRepository
 from autosilenttrimmer.presentation import qt_app
 from autosilenttrimmer.presentation.cli.runner import run_cli
 from autosilenttrimmer.presentation.logs import app_entry as logs_entry
+from autosilenttrimmer.presentation.theme import (
+    PALETTE_HIGHLIGHT_RGB,
+    PALETTE_WINDOW_RGB,
+    format_error_code_label,
+    format_stage_label,
+    resolve_asset_path,
+)
 from autosilenttrimmer.presentation.tune import app_entry as tune_entry
 
 pytestmark = pytest.mark.unit
@@ -38,7 +47,7 @@ def _schedule_quit(app, delay_ms: int = 60) -> None:
 
 
 def test_apply_dark_palette_sets_expected_theme_colors(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Verify shared dark palette applies exact Fusion window and highlight colors."""
+    """Verify shared gold-and-warm-brown theme applies exact Fusion window and highlight colors."""
     from PyQt6.QtGui import QColor, QPalette
 
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
@@ -46,8 +55,53 @@ def test_apply_dark_palette_sets_expected_theme_colors(monkeypatch: pytest.Monke
     qt_app.apply_dark_palette(app)
 
     pal = app.palette()
-    assert pal.color(QPalette.ColorRole.Window) == QColor(28, 31, 38)
-    assert pal.color(QPalette.ColorRole.Highlight) == QColor(0, 200, 105)
+    assert pal.color(QPalette.ColorRole.Window) == QColor(*PALETTE_WINDOW_RGB)
+    assert pal.color(QPalette.ColorRole.Highlight) == QColor(*PALETTE_HIGHLIGHT_RGB)
+    assert app.styleSheet() != ""
+
+
+def test_mortem_branding_and_zero_underscores_in_ui_presentation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Ensure product branding, assets, dropdowns, and formatters omit raw underscores."""
+    from autosilenttrimmer.presentation.tune.tune_window import TuneWindow
+    from PyQt6.QtWidgets import QComboBox
+
+    assert APP_SHORT_NAME == "Mortem"
+    assert APP_NAME == "Mortem Primer"
+    assert SHELL_CONTEXT_MENU_LABEL == "Trim This Video"
+    assert resolve_asset_path("mortem_icon.png") is not None
+    assert resolve_asset_path("mortem_tray.png") is not None
+
+    for spec in SETTINGS_SCHEMA:
+        assert "_" not in spec.tab
+        assert "_" not in spec.group
+        assert "_" not in spec.label, f"Underscore leaked into UI label: {spec.label}"
+        assert "_" not in spec.description, (
+            f"Underscore leaked into description: {spec.description}"
+        )
+        if spec.control_type == ControlType.CHOICE:
+            for choice in spec.choices:
+                display = spec.display_for_choice(choice)
+                assert "_" not in display, f"Underscore leaked into choice label: {display}"
+
+    assert "_" not in format_stage_label("ANALYZING")
+    assert "_" not in format_error_code_label("E_DISK_FULL")
+
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    app = _get_offscreen_app()
+    qt_app.apply_dark_palette(app)
+    win = TuneWindow(
+        settings_repo=JsonSettingsRepository(str(tmp_path / "settings.json")),
+        settings_file_path=str(tmp_path / "settings.json"),
+    )
+    try:
+        assert "Mortem Primer" in win.windowTitle()
+        for combo in win.findChildren(QComboBox):
+            for idx in range(combo.count()):
+                assert "_" not in combo.itemText(idx)
+    finally:
+        win.close()
 
 
 def test_run_single_instance_window_raises_existing_instance(

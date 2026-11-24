@@ -14,7 +14,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from autosilenttrimmer.core.constants import SUPPORTED_MEDIA_EXTENSIONS
+from autosilenttrimmer.core.constants import APP_NAME, SUPPORTED_MEDIA_EXTENSIONS
 from autosilenttrimmer.infrastructure.platform.paths import PlatformDirsPaths
 from autosilenttrimmer.infrastructure.platform.shell.factory import create_shell_integration
 
@@ -29,7 +29,7 @@ def default_windows_install_dir() -> Path:
 
 def _windows_start_menu_dir() -> Path:
     app_data = os.environ.get("APPDATA") or os.path.expanduser("~")
-    return Path(app_data) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Trim This Video"
+    return Path(app_data) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / APP_NAME
 
 
 def stop_installed_processes(install_dir: Path, *, dry_run: bool = False) -> list[int]:
@@ -130,7 +130,7 @@ def clean_installed_app(
 def main() -> int:
     """CLI entrypoint for clean post-test uninstall before reinstalling newer builds."""
     parser = argparse.ArgumentParser(
-        description="Cleanly remove installed Trim This Video desktop app (preserves logs unless --purge-data)."
+        description=f"Cleanly remove installed {APP_NAME} desktop app (preserves logs unless --purge-data)."
     )
     parser.add_argument(
         "--install-dir",

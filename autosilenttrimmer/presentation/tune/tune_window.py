@@ -1,4 +1,4 @@
-"""Minimal PyQt6 tabbed Tune inspector modeled on Docker Desktop settings."""
+"""Minimal PyQt6 tabbed settings inspector for Mortem Primer."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QFormLayout,
     QGroupBox,
@@ -20,12 +21,18 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from autosilenttrimmer.core.constants import APP_NAME, TIER1_VIDEO_EXTENSIONS, VIDEO_EXTENSIONS
+from autosilenttrimmer.core.constants import (
+    APP_NAME,
+    SHELL_CONTEXT_MENU_LABEL,
+    TIER1_VIDEO_EXTENSIONS,
+    VIDEO_EXTENSIONS,
+)
 from autosilenttrimmer.core.settings_schema import SETTINGS_SCHEMA, TUNE_TABS, SettingFieldSpec
 from autosilenttrimmer.domain.contracts.ipc import IJobGatewayClient
 from autosilenttrimmer.domain.contracts.shell_integration import IShellIntegration
 from autosilenttrimmer.domain.contracts.storage import ISettingsRepository
 from autosilenttrimmer.domain.models.settings import UserSettings
+from autosilenttrimmer.presentation.theme import STATUS_OK, STATUS_WARN, resolve_asset_path
 from autosilenttrimmer.presentation.tune.field_factory import (
     BoundFieldControl,
     build_field_control,
@@ -45,7 +52,7 @@ def _open_file_in_os(path: str) -> None:
 
 
 class TuneWindow(QMainWindow):
-    """Technical configuration editor reading/persisting UserSettings to settings.json."""
+    """Configuration window reading and persisting UserSettings cleanly."""
 
     def __init__(
         self,
@@ -66,24 +73,39 @@ class TuneWindow(QMainWindow):
         self._controls: dict[str, BoundFieldControl] = {}
         self._dirty = False
 
-        self.setWindowTitle(f"Tune — {APP_NAME}")
-        self.resize(720, 580)
-        self.setMinimumSize(620, 480)
+        self.setWindowTitle(f"Settings — {APP_NAME}")
+        self.resize(820, 640)
+        self.setMinimumSize(720, 520)
 
         self._build_ui()
         self._load_into_widgets(self._repo.load())
 
     def _build_ui(self) -> None:
         central = QWidget(self)
+        central.setObjectName("centralRoot")
         self.setCentralWidget(central)
         root_layout = QVBoxLayout(central)
-        root_layout.setContentsMargins(14, 12, 14, 12)
-        root_layout.setSpacing(10)
+        root_layout.setContentsMargins(18, 16, 18, 16)
+        root_layout.setSpacing(12)
 
         # Header
         header_row = QHBoxLayout()
-        title_lbl = QLabel(f"{APP_NAME} Configuration", self)
-        title_lbl.setStyleSheet("font-size: 14px; font-weight: bold;")
+        header_row.setSpacing(10)
+        icon_path = resolve_asset_path("mortem_icon.png")
+        if icon_path is not None:
+            emblem = QLabel(self)
+            emblem.setPixmap(
+                QPixmap(icon_path).scaled(
+                    26,
+                    26,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+            header_row.addWidget(emblem)
+
+        title_lbl = QLabel(f"{APP_NAME} Settings", self)
+        title_lbl.setObjectName("headerTitle")
         self._status_lbl = QLabel("Synchronized", self)
         self._status_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         header_row.addWidget(title_lbl)
@@ -99,10 +121,13 @@ class TuneWindow(QMainWindow):
 
         # Footer action bar
         footer_row = QHBoxLayout()
+        footer_row.setSpacing(8)
         reset_btn = QPushButton("Reset Defaults", self)
-        open_json_btn = QPushButton("Open settings.json", self)
+        open_json_btn = QPushButton("Open Config File", self)
+        open_json_btn.setToolTip("Open the JSON configuration file on disk.")
         close_btn = QPushButton("Close", self)
-        self._apply_btn = QPushButton("Apply && Save", self)
+        self._apply_btn = QPushButton("Save && Apply", self)
+        self._apply_btn.setObjectName("primaryButton")
         self._apply_btn.setDefault(True)
 
         reset_btn.clicked.connect(self._on_reset_defaults)
@@ -120,10 +145,13 @@ class TuneWindow(QMainWindow):
     def _build_tab(self, tab_name: str) -> QWidget:
         scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setFrameShape(scroll.Shape.NoFrame)
         page = QWidget(scroll)
+        page.setObjectName("scrollPage")
         page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(10, 10, 10, 10)
-        page_layout.setSpacing(10)
+        page_layout.setContentsMargins(12, 12, 12, 12)
+        page_layout.setSpacing(12)
 
         grouped: dict[str, list[SettingFieldSpec]] = {}
         for spec in SETTINGS_SCHEMA:
@@ -133,6 +161,8 @@ class TuneWindow(QMainWindow):
         for group_name, specs in grouped.items():
             box = QGroupBox(group_name, page)
             form = QFormLayout(box)
+            form.setHorizontalSpacing(20)
+            form.setVerticalSpacing(10)
             form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
             form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             for spec in specs:
@@ -151,7 +181,7 @@ class TuneWindow(QMainWindow):
         return scroll
 
     def _build_shell_box(self, parent: QWidget) -> QGroupBox:
-        box = QGroupBox("Explorer Context Menu", parent)
+        box = QGroupBox("Windows Explorer Context Menu", parent)
         row = QHBoxLayout(box)
         self._shell_status_lbl = QLabel(box)
         self._shell_toggle_btn = QPushButton(box)
@@ -167,9 +197,9 @@ class TuneWindow(QMainWindow):
             return
         active = self._shell.is_registered(TIER1_VIDEO_EXTENSIONS)
         self._shell_status_lbl.setText(
-            "Status: Registered ('Trim This Video')" if active else "Status: Not registered"
+            f"Status: Active ('{SHELL_CONTEXT_MENU_LABEL}')" if active else "Status: Disabled"
         )
-        self._shell_toggle_btn.setText("Unregister Menu" if active else "Register Menu")
+        self._shell_toggle_btn.setText("Remove Menu" if active else "Enable Menu")
 
     def _on_toggle_shell(self) -> None:
         if self._shell is None:
@@ -178,7 +208,7 @@ class TuneWindow(QMainWindow):
         if self._shell.is_registered(TIER1_VIDEO_EXTENSIONS):
             self._shell.unregister(exts)
         else:
-            self._shell.register(self._shim_exe, APP_NAME, exts)
+            self._shell.register(self._shim_exe, SHELL_CONTEXT_MENU_LABEL, exts)
         self._refresh_shell_status()
 
     def _load_into_widgets(self, settings: UserSettings) -> None:
@@ -194,17 +224,17 @@ class TuneWindow(QMainWindow):
         return UserSettings.from_dict(draft)
 
     def _mark_dirty(self) -> None:
-        self._set_dirty(True, "Modified (unsaved)")
+        self._set_dirty(True, "Unsaved changes")
 
     def _set_dirty(self, dirty: bool, message: str) -> None:
         self._dirty = dirty
         self._status_lbl.setText(message)
-        color = "#ffca28" if dirty else "#00e676"
-        self._status_lbl.setStyleSheet(f"color: {color}; font-weight: bold;")
+        color = STATUS_WARN if dirty else STATUS_OK
+        self._status_lbl.setStyleSheet(f"color: {color}; font-weight: 600;")
 
     def _on_reset_defaults(self) -> None:
         self._load_into_widgets(UserSettings())
-        self._set_dirty(True, "Defaults loaded (click Apply & Save)")
+        self._set_dirty(True, "Defaults loaded (save to apply)")
 
     def _on_open_settings_file(self) -> None:
         if not os.path.isfile(self._settings_file):
@@ -215,5 +245,5 @@ class TuneWindow(QMainWindow):
         updated = self._collect_settings()
         self._repo.save(updated)
         notified = bool(self._gateway and self._gateway.notify_settings_updated())
-        status = "Saved & hot-reloaded in active daemon" if notified else "Saved to settings.json"
+        status = "Saved & applied to active service" if notified else "Settings saved"
         self._set_dirty(False, status)

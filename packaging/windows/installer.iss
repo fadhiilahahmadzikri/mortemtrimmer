@@ -1,12 +1,12 @@
-; Inno Setup 6 Per-User Installer for AutoSilentTrimmer ("Trim This Video")
-; Aligned with docs/01_blueprint_produk_arsitektur.md & docs/02_feasibility_dan_distribusi.md
+; Inno Setup 6 Per-User Installer for Mortem Primer ("Mortem")
 
-#define MyAppName "Trim This Video"
-#define MyAppPublisher "AutoSilentTrimmer"
+#define MyAppName "Mortem Primer"
+#define MyAppShortName "Mortem"
+#define MyAppPublisher "Mortem"
 #define MyAppVersion "1.0.0"
 #define MyAppExeName "autosilenttrimmer.exe"
 #define MyAppShimExeName "trim-shim.exe"
-#define MyAppUserModelID "AutoSilentTrimmer.DesktopApp.1"
+#define MyAppUserModelID "MortemPrimer.DesktopApp.1"
 
 [Setup]
 AppId={{B4E73E3A-9C2F-4F91-A72E-83D18D410F12}
@@ -20,7 +20,8 @@ PrivilegesRequiredOverridesAllowed=dialog
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\..\dist\installer
-OutputBaseFilename=TrimThisVideo-Setup-{#MyAppVersion}-win-x64
+OutputBaseFilename=MortemPrimer-Setup-{#MyAppVersion}-win-x64
+SetupIconFile=..\..\packaging\windows\mortem.ico
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -33,7 +34,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "contextmenu"; Description: "Register right-click 'Trim This Video' menu in File Explorer"
-Name: "autostart"; Description: "Start Trim This Video background service on sign-in"; Flags: unchecked
+Name: "autostart"; Description: "Start {#MyAppName} background service on sign-in"; Flags: unchecked
 
 [Files]
 Source: "..\..\dist\AutoSilentTrimmer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -42,8 +43,8 @@ Source: "..\..\packaging\dist_notices\THIRD_PARTY_NOTICES.txt"; DestDir: "{app}"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--daemon --tray"; AppUserModelID: "{#MyAppUserModelID}"
-Name: "{group}\Tune {#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--tune"
-Name: "{group}\View Logs - {#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--logs"
+Name: "{group}\Settings - {#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--tune"
+Name: "{group}\System Logs - {#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--logs"
 Name: "{group}\System Readiness Check"; Filename: "{app}\autosilenttrimmer-cli.exe"; Parameters: "--check"
 Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--daemon --tray"; Tasks: autostart
 
