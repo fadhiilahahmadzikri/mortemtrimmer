@@ -33,14 +33,12 @@ class SystemReadinessUseCase:
 
         status_counts = Counter(item.status.value for item in all_items)
         has_critical_failures = any(
-            item.is_critical and item.status == ReadinessStatus.FAILED
-            for item in all_items
+            item.is_critical and item.status == ReadinessStatus.FAILED for item in all_items
         )
         is_ready = not has_critical_failures
 
         has_gpu_acceleration = any(
-            item.component == "CUDA Hardware Acceleration"
-            and item.status == ReadinessStatus.READY
+            item.component == "CUDA Hardware Acceleration" and item.status == ReadinessStatus.READY
             for item in all_items
         )
 

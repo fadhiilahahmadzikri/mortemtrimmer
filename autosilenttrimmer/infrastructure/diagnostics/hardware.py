@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import platform
 import sys
+
 import torch
 
 from autosilenttrimmer.domain.contracts.diagnostic import ISystemDiagnostic

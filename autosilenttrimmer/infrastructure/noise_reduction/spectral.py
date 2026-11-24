@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+
 import soundfile as sf
 
 from autosilenttrimmer.core.config import NoiseReductionConfig

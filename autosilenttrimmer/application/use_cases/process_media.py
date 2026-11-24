@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 import tempfile
+
 import soundfile as sf
 
 from autosilenttrimmer.core.constants import (
@@ -81,9 +82,7 @@ class ProcessMediaUseCase:
             if self._vad_strategy:
                 manifest_path = output_path + MANIFEST_SUFFIX
                 logger.info("Executing Voice Activity Detection...")
-                segments = self._vad_strategy.get_keep_segments(
-                    target_audio, manifest_path
-                )
+                segments = self._vad_strategy.get_keep_segments(target_audio, manifest_path)
                 logger.info("VAD detected %d speech segments.", len(segments))
 
             cut_suffix = TEMP_VIDEO_SUFFIX if is_input_video else TEMP_AUDIO_SUFFIX
@@ -92,9 +91,7 @@ class ProcessMediaUseCase:
 
             try:
                 if self._vad_strategy:
-                    self._media_manager.slice_and_concat(
-                        input_path, segments, cut_media
-                    )
+                    self._media_manager.slice_and_concat(input_path, segments, cut_media)
                     final_duration = sum(s.duration for s in segments)
                 else:
                     shutil.copy(input_path, cut_media)
@@ -114,18 +111,12 @@ class ProcessMediaUseCase:
                             audio_to_enhance = cut_media
 
                         logger.info("Executing noise reduction...")
-                        self._noise_reduction_strategy.process(
-                            audio_to_enhance, cut_clean_audio
-                        )
+                        self._noise_reduction_strategy.process(audio_to_enhance, cut_clean_audio)
 
                         if is_input_video:
-                            self._media_manager.merge_audio(
-                                cut_media, cut_clean_audio, output_path
-                            )
+                            self._media_manager.merge_audio(cut_media, cut_clean_audio, output_path)
                         else:
-                            self._media_manager.export_audio(
-                                cut_clean_audio, output_path
-                            )
+                            self._media_manager.export_audio(cut_clean_audio, output_path)
                     finally:
                         if os.path.exists(cut_raw_audio):
                             os.remove(cut_raw_audio)
@@ -150,9 +141,7 @@ class ProcessMediaUseCase:
 
             silence_removed = max(0.0, original_duration - final_duration)
             reduction_percentage = (
-                (silence_removed / original_duration) * 100.0
-                if original_duration > 0
-                else 0.0
+                (silence_removed / original_duration) * 100.0 if original_duration > 0 else 0.0
             )
 
             return ProcessingResult(

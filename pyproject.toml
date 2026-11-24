@@ -1,0 +1,72 @@
+[project]
+name = "autosilenttrimmer"
+version = "1.0.0"
+description = "State-of-the-Art AI-Powered Silence Remover & Noise Reduction Pipeline"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "fadhiilahahmadzikri" }
+]
+dependencies = [
+  "numpy",
+  "soundfile",
+  "torch",
+  "torchaudio",
+  "noisereduce",
+  "tqdm",
+  "matplotlib",
+  "seaborn",
+  "deepfilternet",
+  "faster-whisper",
+  "imageio-ffmpeg>=0.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pre-commit>=4.0.0",
+  "ruff>=0.14.0",
+  "commitizen>=3.0.0",
+  "pytest>=8.0.0",
+]
+
+[project.scripts]
+autosilenttrimmer = "autosilenttrimmer.presentation.cli.runner:run_cli"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["autosilenttrimmer", "scripts"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # isort
+  "B",   # bugbear
+  "UP",  # pyupgrade
+  "SIM", # simplify
+  "RUF", # ruff-specific
+]
+ignore = [
+  "E501",  # line too long (handled by formatter)
+  "B008",  # do not perform function calls in argument defaults
+  "UP036", # version block check in diagnostic probe
+]
+
+[tool.ruff.lint.per-file-ignores]
+"autosilenttrimmer/infrastructure/diagnostics/engines.py" = ["F401"]
+"scripts/*" = ["E402"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "semver"

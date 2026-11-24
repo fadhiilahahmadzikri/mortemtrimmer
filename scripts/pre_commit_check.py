@@ -61,7 +61,7 @@ def gate_file_size_limit(files: list[str]) -> bool:
     print(f"[gate 2/4] Checking file line count limit (max {MAX_LINES_PER_FILE} lines)...")
     has_error = False
     for path in files:
-        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(path, encoding="utf-8", errors="ignore") as f:
             lines = len(f.readlines())
         if lines > MAX_LINES_PER_FILE:
             print(f"  [LINE LIMIT EXCEEDED] {path}: {lines} lines (max {MAX_LINES_PER_FILE})")
@@ -76,7 +76,7 @@ def gate_clean_code_hygiene(files: list[str]) -> bool:
     print("[gate 3/4] Scanning for hardcoded paths and prohibited artifacts...")
     has_error = False
     for path in files:
-        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(path, encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
         # Check hardcoded machine paths
@@ -132,7 +132,7 @@ def gate_system_readiness() -> bool:
 
 
 def main() -> int:
-    """Run all quality gates in sequence."""
+    """Run Clean Architecture quality gates."""
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     files = find_source_files(root_dir)
 
@@ -140,8 +140,10 @@ def main() -> int:
         gate_syntax_compilation(files)
         and gate_file_size_limit(files)
         and gate_clean_code_hygiene(files)
-        and gate_system_readiness()
     )
+
+    if "--with-readiness" in sys.argv:
+        success = success and gate_system_readiness()
 
     if not success:
         print("\nPre-commit quality gates FAILED. Commit aborted.")

@@ -8,11 +8,10 @@ from autosilenttrimmer.domain.contracts.vad import IVoiceActivityDetector
 from autosilenttrimmer.domain.contracts.visualizer import IVisualizer
 
 __all__ = [
-    "ISystemDiagnostic",
     "IFFmpegLocator",
     "IMediaManager",
     "INoiseReductionStrategy",
-    "IVoiceActivityDetector",
+    "ISystemDiagnostic",
     "IVisualizer",
+    "IVoiceActivityDetector",
 ]
-

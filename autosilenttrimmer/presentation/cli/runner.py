@@ -6,14 +6,14 @@ import logging
 import sys
 import warnings
 
+from autosilenttrimmer.application.use_cases.process_media import ProcessMediaUseCase
+from autosilenttrimmer.application.use_cases.system_readiness import SystemReadinessUseCase
 from autosilenttrimmer.core.config import (
     MediaProcessingConfig,
     NoiseReductionConfig,
     VADConfig,
 )
 from autosilenttrimmer.core.exceptions import AutoSilentTrimmerException
-from autosilenttrimmer.application.use_cases.process_media import ProcessMediaUseCase
-from autosilenttrimmer.application.use_cases.system_readiness import SystemReadinessUseCase
 from autosilenttrimmer.infrastructure.diagnostics.engines import EngineDiagnostic
 from autosilenttrimmer.infrastructure.diagnostics.ffmpeg import FFmpegDiagnostic
 from autosilenttrimmer.infrastructure.diagnostics.hardware import HardwareDiagnostic
@@ -85,16 +85,12 @@ def run_cli(args: list[str] | None = None) -> int:
             else None
         )
         noise_reduction_strategy = (
-            NoiseReductionFactory.create_noise_reduction(
-                parsed_args.method, config.noise_reduction
-            )
+            NoiseReductionFactory.create_noise_reduction(parsed_args.method, config.noise_reduction)
             if parsed_args.method != "none"
             else None
         )
         visualizer = (
-            MatplotlibTimelinePlotter(config.visualizer)
-            if vad_strategy is not None
-            else None
+            MatplotlibTimelinePlotter(config.visualizer) if vad_strategy is not None else None
         )
 
         use_case = ProcessMediaUseCase(

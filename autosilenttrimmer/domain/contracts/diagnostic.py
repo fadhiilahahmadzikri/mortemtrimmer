@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+
 from autosilenttrimmer.domain.models.readiness import ReadinessItem
 
 

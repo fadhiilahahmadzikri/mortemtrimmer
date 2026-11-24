@@ -43,7 +43,7 @@ class FFmpegDiagnostic(ISystemDiagnostic):
             clean_path = [
                 p for p in env.get("PATH", "").split(os.pathsep) if "venv" not in p.lower()
             ]
-            env["PATH"] = os.pathsep.join([ffmpeg_dir] + clean_path)
+            env["PATH"] = os.pathsep.join([ffmpeg_dir, *clean_path])
 
             version_proc = subprocess.run(
                 [ffmpeg_path, "-version"],
@@ -53,7 +53,9 @@ class FFmpegDiagnostic(ISystemDiagnostic):
                 env=env,
             )
             if version_proc.returncode == 0:
-                first_line = version_proc.stdout.splitlines()[0] if version_proc.stdout else "Available"
+                first_line = (
+                    version_proc.stdout.splitlines()[0] if version_proc.stdout else "Available"
+                )
                 items.append(
                     ReadinessItem(
                         component="FFmpeg Execution Integrity",

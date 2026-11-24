@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+
 from autosilenttrimmer.domain.contracts.diagnostic import ISystemDiagnostic
 from autosilenttrimmer.domain.models.readiness import ReadinessItem, ReadinessStatus
 
@@ -69,8 +70,8 @@ class EngineDiagnostic(ISystemDiagnostic):
 
         # 2. Soundfile & Noisereduce (Classical Gating)
         try:
-            import soundfile
             import noisereduce
+            import soundfile
 
             items.append(
                 ReadinessItem(

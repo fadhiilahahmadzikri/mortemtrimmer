@@ -1,10 +1,50 @@
-# Standard pre-commit framework configuration
+minimum_pre_commit_version: "4.0.0"
+
+# Install shims for all three stages with a single `pre-commit install`.
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+
+fail_fast: false
+
 repos:
   - repo: local
     hooks:
-      - id: autotrimmer-quality-gate
-        name: AutoSilentTrimmer Pre-Commit Quality Gate
+      # Ruff Linting (Fast auto-fix)
+      - id: ruff-check
+        name: ruff check
+        entry: ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types_or: [python, pyi]
+        stages: [pre-commit]
+
+      # Ruff Formatting
+      - id: ruff-format
+        name: ruff format
+        entry: ruff format
+        language: system
+        types_or: [python, pyi]
+        stages: [pre-commit]
+
+      # Clean Architecture Constraints (Max 500 lines, zero hardcoded paths, syntax)
+      - id: clean-architecture-rules
+        name: Clean Architecture Quality Gate (500 lines & hygiene)
         entry: python scripts/pre_commit_check.py
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-commit]
+
+      # Conventional Commits Enforcement
+      - id: conventional-commit
+        name: Conventional Commits Validation
+        entry: python scripts/check_commit_msg.py
+        language: system
+        stages: [commit-msg]
+
+      # Pre-Push Pre-Flight System Readiness Audit
+      - id: system-readiness
+        name: Pre-Push System Readiness Diagnostic
+        entry: python scripts/run_readiness.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

@@ -44,10 +44,8 @@ class FFmpegMediaManager(IMediaManager):
     def _get_clean_env(self) -> dict[str, str]:
         env = os.environ.copy()
         ffmpeg_dir = os.path.dirname(self._ffmpeg_path)
-        clean_path = [
-            p for p in env.get("PATH", "").split(os.pathsep) if "venv" not in p.lower()
-        ]
-        env["PATH"] = os.pathsep.join([ffmpeg_dir] + clean_path)
+        clean_path = [p for p in env.get("PATH", "").split(os.pathsep) if "venv" not in p.lower()]
+        env["PATH"] = os.pathsep.join([ffmpeg_dir, *clean_path])
         return env
 
     def _verify_ffmpeg_active(self) -> None:
@@ -69,9 +67,7 @@ class FFmpegMediaManager(IMediaManager):
                 f"Failed to execute FFmpeg at {self._ffmpeg_path}: {e}"
             ) from e
 
-    def extract_audio(
-        self, source_media_path: str, destination_audio_path: str
-    ) -> None:
+    def extract_audio(self, source_media_path: str, destination_audio_path: str) -> None:
         logger.info(
             "Extracting audio stream (%d Hz mono PCM)...",
             DEFAULT_SAMPLE_RATE_DEEPFILTER,
@@ -92,9 +88,7 @@ class FFmpegMediaManager(IMediaManager):
         ]
         self._run_ffmpeg(command)
 
-    def merge_audio(
-        self, video_path: str, clean_audio_path: str, output_path: str
-    ) -> None:
+    def merge_audio(self, video_path: str, clean_audio_path: str, output_path: str) -> None:
         logger.info("Multiplexing clean audio with source video stream...")
         command = [
             self._ffmpeg_path,
@@ -159,12 +153,10 @@ class FFmpegMediaManager(IMediaManager):
                 start, end = segments[0].start, segments[0].end
                 if is_video:
                     filter_parts.append(
-                        f"[0:v]trim=start={start:.6f}:end={end:.6f},"
-                        f"setpts=PTS-STARTPTS[vout];"
+                        f"[0:v]trim=start={start:.6f}:end={end:.6f},setpts=PTS-STARTPTS[vout];"
                     )
                     filter_parts.append(
-                        f"[0:a]atrim=start={start:.6f}:end={end:.6f},"
-                        f"asetpts=PTS-STARTPTS[aout]"
+                        f"[0:a]atrim=start={start:.6f}:end={end:.6f},asetpts=PTS-STARTPTS[aout]"
                     )
                     map_args = ["-map", "[vout]", "-map", "[aout]"]
                     codec_args = [
@@ -183,8 +175,7 @@ class FFmpegMediaManager(IMediaManager):
                     ]
                 else:
                     filter_parts.append(
-                        f"[0:a]atrim=start={start:.6f}:end={end:.6f},"
-                        f"asetpts=PTS-STARTPTS[aout]"
+                        f"[0:a]atrim=start={start:.6f}:end={end:.6f},asetpts=PTS-STARTPTS[aout]"
                     )
                     map_args = ["-map", "[aout]"]
                     codec_args = ["-c:a", AUDIO_CODEC_PCM_S16LE]
@@ -277,9 +268,7 @@ class FFmpegMediaManager(IMediaManager):
                 env=self._get_clean_env(),
             )
         except subprocess.CalledProcessError as e:
-            raise FFmpegExecutionException(
-                f"FFmpeg execution failed:\n{e.stderr}"
-            ) from e
+            raise FFmpegExecutionException(f"FFmpeg execution failed:\n{e.stderr}") from e
         except OSError as e:
             raise FFmpegExecutionException(
                 f"OS failed to invoke FFmpeg ({self._ffmpeg_path}): {e}"

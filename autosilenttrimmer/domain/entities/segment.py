@@ -16,9 +16,7 @@ class MediaSegment:
         if self.start < 0:
             raise ValueError(f"Start time cannot be negative: {self.start}")
         if self.end < self.start:
-            raise ValueError(
-                f"End time ({self.end}) cannot be less than start time ({self.start})"
-            )
+            raise ValueError(f"End time ({self.end}) cannot be less than start time ({self.start})")
 
     @property
     def duration(self) -> float:
@@ -27,8 +25,8 @@ class MediaSegment:
 
     @classmethod
     def merge_overlapping(
-        cls, segments: list["MediaSegment"], min_gap: float = 0.0
-    ) -> list["MediaSegment"]:
+        cls, segments: list[MediaSegment], min_gap: float = 0.0
+    ) -> list[MediaSegment]:
         """Merge overlapping segments or segments separated by less than min_gap seconds."""
         if not segments:
             return []

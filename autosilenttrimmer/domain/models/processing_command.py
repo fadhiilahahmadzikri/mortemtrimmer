@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from autosilenttrimmer.core.constants import (
     DEFAULT_FFMPEG_EXECUTABLE,
     DEFAULT_MIN_SILENCE_GAP_SEC,

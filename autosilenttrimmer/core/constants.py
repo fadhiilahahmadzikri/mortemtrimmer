@@ -23,12 +23,8 @@ DEFAULT_X264_CRF: str = "18"
 DEFAULT_X264_BF: str = "0"
 
 # Supported file extensions
-VIDEO_EXTENSIONS: frozenset[str] = frozenset(
-    {".mp4", ".mkv", ".avi", ".mov", ".flv", ".webm"}
-)
-AUDIO_EXTENSIONS: frozenset[str] = frozenset(
-    {".wav", ".mp3", ".aac", ".flac", ".ogg", ".m4a"}
-)
+VIDEO_EXTENSIONS: frozenset[str] = frozenset({".mp4", ".mkv", ".avi", ".mov", ".flv", ".webm"})
+AUDIO_EXTENSIONS: frozenset[str] = frozenset({".wav", ".mp3", ".aac", ".flac", ".ogg", ".m4a"})
 
 # VAD parameters
 DEFAULT_MIN_SILENCE_GAP_SEC: float = 0.5

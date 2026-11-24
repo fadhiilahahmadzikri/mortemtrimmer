@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+
 import torch
 from tqdm import tqdm
 
@@ -60,9 +61,7 @@ class WhisperBasedVAD(IVoiceActivityDetector):
         raw_segments: list[MediaSegment] = []
         manifest_lines: list[str] = []
 
-        for segment in tqdm(
-            segments_gen, desc="Whisper Semantic Analysis", unit=" segment"
-        ):
+        for segment in tqdm(segments_gen, desc="Whisper Semantic Analysis", unit=" segment"):
             if (
                 segment.no_speech_prob > self._config.whisper_no_speech_threshold
                 or not segment.text.strip()
@@ -76,9 +75,8 @@ class WhisperBasedVAD(IVoiceActivityDetector):
             )
 
             for word in segment.words:
-                if (
-                    not word.word.strip()
-                    or (word.end - word.start > self._config.whisper_max_word_duration_sec)
+                if not word.word.strip() or (
+                    word.end - word.start > self._config.whisper_max_word_duration_sec
                 ):
                     continue
                 manifest_lines.append(
@@ -92,6 +90,4 @@ class WhisperBasedVAD(IVoiceActivityDetector):
             with open(manifest_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(manifest_lines))
 
-        return MediaSegment.merge_overlapping(
-            raw_segments, min_gap=self._config.min_silence_gap
-        )
+        return MediaSegment.merge_overlapping(raw_segments, min_gap=self._config.min_silence_gap)

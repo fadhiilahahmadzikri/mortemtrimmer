@@ -6,12 +6,7 @@ import logging
 
 from autosilenttrimmer.core.config import VisualizerConfig
 from autosilenttrimmer.core.constants import (
-    PLOT_COLOR_ACTIVE_SPEECH,
-    PLOT_COLOR_DISCARDED,
     PLOT_COLOR_LEGEND_BG,
-    PLOT_DEFAULT_DPI,
-    PLOT_FIG_HEIGHT,
-    PLOT_FIG_WIDTH,
     PLOT_STYLE_THEME,
     PLOT_SUFFIX,
     PLOT_THEME_RC,

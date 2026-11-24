@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import sys
 from autosilenttrimmer.domain.models.readiness import (
     ReadinessItem,
-    ReadinessStatus,
     SystemReadinessReport,
 )
 

@@ -266,6 +266,32 @@ autosilenttrimmer/
 
 ---
 
+## Developer Workflow & Git Hooks
+
+This repository adheres to an enterprise Git hooks and code quality infrastructure with multi-stage verification:
+
+### 1. Setup Development Environment
+```bash
+# Using Makefile
+make bootstrap
+
+# Or using Python:
+python scripts/setup_dev.py
+```
+
+### 2. Available Make Targets
+- `make lint` : Run Ruff linter across the entire repository.
+- `make format` : Format all files with Ruff.
+- `make readiness` : Execute the full pre-flight system readiness diagnostic.
+- `make check` : Execute all pre-commit hooks on all files.
+
+### 3. Git Hooks Quality Gates
+- **`pre-commit`** : Fast Ruff check, formatting, and Clean Architecture file length & hygiene gate (<3s).
+- **`commit-msg`** : Conventional Commits enforcement (`feat`, `fix`, `chore`, `docs`, `refactor`, etc.) (<1s).
+- **`pre-push`** : Deep system readiness diagnostic audit (<60s).
+
+---
+
 ## Troubleshooting
 
 | Issue | Solution |

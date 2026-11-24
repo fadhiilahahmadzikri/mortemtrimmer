@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+
 import torch
 from tqdm import tqdm
 
@@ -49,18 +50,14 @@ class SileroBasedVAD(IVoiceActivityDetector):
         raw_segments: list[MediaSegment] = []
         manifest_lines: list[str] = []
 
-        for seg in tqdm(
-            speech_timestamps, desc="Silero Segmentation", unit=" segment"
-        ):
+        for seg in tqdm(speech_timestamps, desc="Silero Segmentation", unit=" segment"):
             start_sec = seg["start"] / float(DEFAULT_SAMPLE_RATE_VAD)
             end_sec = seg["end"] / float(DEFAULT_SAMPLE_RATE_VAD)
 
             start_padded = max(0.0, start_sec - self._config.pad)
             end_padded = end_sec + self._config.pad
 
-            manifest_lines.append(
-                f"[{start_sec:.3f} -> {end_sec:.3f}] Speech Detected"
-            )
+            manifest_lines.append(f"[{start_sec:.3f} -> {end_sec:.3f}] Speech Detected")
             raw_segments.append(MediaSegment(start=start_padded, end=end_padded))
 
         if manifest_path:

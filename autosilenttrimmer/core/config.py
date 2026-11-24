@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+
 from autosilenttrimmer.core.constants import (
     DEFAULT_AUDIO_BITRATE,
     DEFAULT_AUDIO_CHANNELS_MONO,
