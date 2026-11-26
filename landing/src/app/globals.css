@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -24,8 +26,10 @@
   --color-cf-accent: var(--cf-accent);
   --color-cf-accent-hover: var(--cf-accent-hover);
   --color-cf-surface: var(--cf-surface);
+  --color-cf-surface-muted: var(--cf-surface-muted);
   --color-cf-dots: var(--cf-dots);
   --color-cf-ink: var(--cf-ink);
+  --color-cf-glass: var(--cf-glass-bg);
   --font-sans: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-code), ui-monospace, monospace;
   --font-heading: var(--font-display), ui-sans-serif, system-ui, sans-serif;
@@ -44,6 +48,7 @@
   --cf-surface: #fdfdfc;
   --cf-surface-muted: #f9f7f6;
   --cf-dots: #ebebeb;
+  --cf-glass-bg: rgb(255 255 255 / 0.78);
 
   --background: #ffffff;
   --foreground: #262626;
@@ -66,6 +71,36 @@
   --radius: 0.625rem;
 }
 
+.dark {
+  --cf-accent: #ff5e1f;
+  --cf-accent-hover: #ff7038;
+  --cf-accent-dark: #d63c01;
+  --cf-ink: #1f1f1f;
+  --cf-surface: #191817;
+  --cf-surface-muted: #2a2927;
+  --cf-dots: rgb(240 227 222 / 0.12);
+  --cf-glass-bg: rgb(21 20 20 / 0.78);
+
+  --background: #151414;
+  --foreground: #f0e3de;
+  --card: #191817;
+  --card-foreground: #f0e3de;
+  --popover: #191817;
+  --popover-foreground: #f0e3de;
+  --primary: #ff5e1f;
+  --primary-foreground: #ffffff;
+  --secondary: #2a2927;
+  --secondary-foreground: #f0e3de;
+  --muted: #2a2927;
+  --muted-foreground: #9a9390;
+  --accent: #2a2927;
+  --accent-foreground: #f0e3de;
+  --destructive: #ff5b66;
+  --border: rgb(240 227 222 / 0.14);
+  --input: rgb(240 227 222 / 0.16);
+  --ring: #ff7038;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -74,15 +109,21 @@
     @apply font-sans scroll-smooth;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-[#ff5e1f]/15 selection:text-[#d63c01];
+    @apply bg-background text-foreground antialiased selection:bg-[#ff5e1f]/15 selection:text-[#d63c01] dark:selection:text-[#ff7038];
   }
 }
 
 .cf-shadow-stack {
   box-shadow:
-    1px 6px 16px 0 rgb(255 255 255 / 0.18) inset,
-    0 4px 12px 0 rgb(0 0 0 / 0.03),
-    0 2px 12px 0 rgb(0 0 0 / 0.05);
+    1px 6px 16px 0 rgb(255 255 255 / 0.14) inset,
+    0 4px 12px 0 rgb(0 0 0 / 0.04),
+    0 2px 12px 0 rgb(0 0 0 / 0.06);
+}
+
+.dark .cf-shadow-stack {
+  box-shadow:
+    1px 6px 16px 0 rgb(255 255 255 / 0.08) inset,
+    0 8px 28px 0 rgb(0 0 0 / 0.45);
 }
 
 .cf-hero-halftone {
@@ -92,5 +133,10 @@
     transparent 1.1px
   );
   background-size: 5px 5px;
-  mask-image: radial-gradient(ellipse 75% 70% at 50% 96%, #000 10%, rgb(0 0 0 / 0.45) 55%, transparent 85%);
+  mask-image: radial-gradient(
+    ellipse 75% 70% at 50% 96%,
+    #000 10%,
+    rgb(0 0 0 / 0.45) 55%,
+    transparent 85%
+  );
 }

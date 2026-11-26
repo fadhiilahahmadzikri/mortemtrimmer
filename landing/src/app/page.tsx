@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { Cpu, MousePointerClick, ShieldCheck } from "lucide-react";
+import { FaqSection } from "@/components/faq-section";
 import { HeroCard } from "@/components/hero-card";
 import {
   CornerAnchorSquares,
@@ -7,6 +8,8 @@ import {
   DotBackdrop,
   RailSection,
 } from "@/components/rail-frame";
+import { SeoJsonLd } from "@/components/seo-jsonld";
+import { SetupSection } from "@/components/setup-section";
 import { SiteHeader } from "@/components/site-header";
 import { type FeaturePillar, SITE_CONFIG } from "@/config/site";
 
@@ -22,6 +25,7 @@ const PILLAR_ICONS: Record<
 export default function Home() {
   return (
     <div className="relative flex min-h-svh w-full flex-col overflow-x-clip bg-background">
+      <SeoJsonLd />
       <DotBackdrop />
       <SiteHeader />
 
@@ -55,6 +59,9 @@ export default function Home() {
             })}
           </div>
         </RailSection>
+
+        <FaqSection />
+        <SetupSection />
       </main>
 
       <footer className="relative z-10 w-full overflow-x-clip">
