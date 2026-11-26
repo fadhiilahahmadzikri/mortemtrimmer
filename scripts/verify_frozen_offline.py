@@ -90,7 +90,7 @@ def _verify_version_and_pe_metadata(
     res = _run_cli(cli_exe, ["--version"], work_dir=work_dir, env=env, timeout_sec=30)
     out = res.stdout
     for required in (
-        "Mortem Primer",
+        "Mortem Trimmer",
         "Fadhiilah Ahmad Zikri",
         "Copyright (c) 2026 Fadhiilah Ahmad Zikri",
         "https://github.com/fadhiilahahmadzikri/mortemtrimmer",
@@ -116,7 +116,7 @@ def _verify_version_and_pe_metadata(
         "foreach ($f in $files) { "
         "$vi = (Get-Item $f).VersionInfo; "
         "Write-Host ($f + ' => Company=' + $vi.CompanyName + ' | Product=' + $vi.ProductName + ' | Copyright=' + $vi.LegalCopyright); "
-        "if ($vi.CompanyName -notmatch 'Fadhiilah Ahmad Zikri' -or $vi.LegalCopyright -notmatch 'Fadhiilah Ahmad Zikri' -or $vi.ProductName -notmatch 'Mortem Primer') { "
+        "if ($vi.CompanyName -notmatch 'Fadhiilah Ahmad Zikri' -or $vi.LegalCopyright -notmatch 'Fadhiilah Ahmad Zikri' -or $vi.ProductName -notmatch 'Mortem Trimmer') { "
         "throw ('Invalid Windows VersionInfo metadata on ' + $f) } }"
     )
     pe_proc = subprocess.run(

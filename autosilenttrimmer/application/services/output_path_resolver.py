@@ -6,6 +6,9 @@ from __future__ import annotations
 
 import os
 import shutil
+from collections.abc import Callable
+from dataclasses import replace
+from typing import TYPE_CHECKING
 
 from autosilenttrimmer.core.config import OutputPolicyConfig
 from autosilenttrimmer.core.constants import (
@@ -14,8 +17,20 @@ from autosilenttrimmer.core.constants import (
     DEFAULT_OUTPUT_NAMING_TEMPLATE,
     DISK_SPACE_SAFETY_FACTOR,
     MIN_FREE_DISK_BYTES,
+    VIDEO_EXTENSIONS,
 )
-from autosilenttrimmer.core.exceptions import DiskFullException, FormatMismatchException
+from autosilenttrimmer.core.exceptions import (
+    DiskFullException,
+    FormatMismatchException,
+    JobCancelledException,
+)
+from autosilenttrimmer.domain.models.processing_command import (
+    DestinationPromptRequest,
+    ProcessMediaCommand,
+)
+
+if TYPE_CHECKING:
+    from autosilenttrimmer.domain.models.media_probe import MediaProbeInfo
 
 
 class OutputPathResolver:
@@ -26,6 +41,7 @@ class OutputPathResolver:
         source_path: str,
         explicit_output_path: str | None = None,
         policy: OutputPolicyConfig | None = None,
+        output_dir: str | None = None,
     ) -> str:
         """Compute non-destructive final output path honoring collision policy (Doc 01 A4, P7)."""
         abs_source = os.path.abspath(source_path)
@@ -41,11 +57,12 @@ class OutputPathResolver:
             return abs_out
 
         cfg = policy or OutputPolicyConfig()
-        target_dir = (
-            os.path.abspath(cfg.custom_dir)
-            if cfg.location != DEFAULT_OUTPUT_LOCATION and cfg.custom_dir
-            else src_dir
-        )
+        if output_dir and output_dir.strip():
+            target_dir = os.path.abspath(output_dir.strip())
+        elif cfg.location != DEFAULT_OUTPUT_LOCATION and cfg.custom_dir:
+            target_dir = os.path.abspath(cfg.custom_dir)
+        else:
+            target_dir = src_dir
         os.makedirs(target_dir, exist_ok=True)
 
         template = cfg.naming_template or DEFAULT_OUTPUT_NAMING_TEMPLATE
@@ -97,6 +114,58 @@ class OutputPathResolver:
                 f"{required / (1024**2):.1f} MB required.",
                 context={"free_bytes": usage.free, "required_bytes": required},
             )
+
+    @staticmethod
+    def resolve_with_disk_guard(
+        *,
+        probe: MediaProbeInfo,
+        command: ProcessMediaCommand,
+        policy: OutputPolicyConfig,
+        on_destination_needed: Callable[[DestinationPromptRequest], str | None] | None = None,
+    ) -> str:
+        """Resolve non-destructive output and enforce free disk space with optional interactive relocation."""
+        active_cmd = command
+        while True:
+            if active_cmd.output_path:
+                out_ext = os.path.splitext(active_cmd.output_path.lower())[1]
+                if not probe.is_video and out_ext and out_ext in VIDEO_EXTENSIONS:
+                    raise FormatMismatchException(
+                        f"Input is audio '{probe.extension}' but output '{out_ext}' is video."
+                    )
+            candidate = OutputPathResolver.resolve(
+                probe.path,
+                active_cmd.output_path,
+                policy,
+                output_dir=active_cmd.output_dir,
+            )
+            try:
+                OutputPathResolver.ensure_disk_space(
+                    candidate,
+                    probe.file_size_bytes,
+                    safety_factor=policy.disk_space_safety_factor,
+                )
+                return candidate
+            except DiskFullException as exc:
+                if on_destination_needed is None:
+                    raise
+                req = DestinationPromptRequest(
+                    source_path=probe.path,
+                    target_path=candidate,
+                    free_bytes=int(exc.context.get("free_bytes", 0)),
+                    required_bytes=int(exc.context.get("required_bytes", 0)),
+                )
+                picked = on_destination_needed(req)
+                if not picked:
+                    raise JobCancelledException(
+                        "Job cancelled: no destination folder selected."
+                    ) from exc
+                chosen_dir = os.path.abspath(picked)
+                next_explicit = (
+                    os.path.join(chosen_dir, os.path.basename(active_cmd.output_path))
+                    if active_cmd.output_path
+                    else None
+                )
+                active_cmd = replace(active_cmd, output_dir=chosen_dir, output_path=next_explicit)
 
     @staticmethod
     def atomic_publish(staging_path: str, final_output_path: str) -> None:

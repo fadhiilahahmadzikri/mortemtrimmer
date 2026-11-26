@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Fadhiilah Ahmad Zikri
-"""Canonical Mortem Primer visual tokens, QSS theme, icon loader, and UI formatters."""
+"""Canonical Mortem Trimmer visual tokens, QSS theme, icon loader, and UI formatters."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import re
 import sys
 from pathlib import Path
 
-# Obsidian, Burnished Gold & Warm Brown palette derived from Mortem Primer emblem
+# Obsidian, Burnished Gold & Warm Brown palette derived from Mortem Trimmer emblem
 BG_DEEP = "#14100E"
 BG_BASE = "#1C1613"
 BG_SURFACE = "#261E18"
@@ -215,9 +215,9 @@ def build_qt_stylesheet() -> str:
         font-size: 11px;
     }}
     QTabWidget::pane {{
-        border: 1px solid {BORDER_SUBTLE};
-        border-radius: 6px;
-        background-color: {BG_BASE};
+        border: none;
+        border-top: 1px solid {BORDER_SUBTLE};
+        background-color: transparent;
         top: -1px;
     }}
     QTabBar::tab {{
@@ -240,6 +240,7 @@ def build_qt_stylesheet() -> str:
         color: {ACCENT_GOLD_BRIGHT};
         border-color: {BORDER_STRONG};
         border-top: 2px solid {ACCENT_GOLD};
+        border-bottom: 1px solid {BG_BASE};
         font-weight: 600;
     }}
     QScrollArea {{

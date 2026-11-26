@@ -19,6 +19,20 @@ from autosilenttrimmer.infrastructure.platform.paths import PlatformDirsPaths
 from autosilenttrimmer.infrastructure.platform.shell.factory import create_shell_integration
 
 TARGET_PROCESS_NAMES: frozenset[str] = frozenset({"autosilenttrimmer.exe", "trim-shim.exe"})
+INNO_UNINSTALL_REG_PATH: str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{B4E73E3A-9C2F-4F91-A72E-83D18D410F12}_is1"
+
+
+def _clear_inno_uninstall_registry() -> bool:
+    """Remove leftover Inno Setup HKCU Uninstall key so reinstalls honor fresh defaults."""
+    if os.name != "nt":
+        return False
+    import winreg
+
+    try:
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, INNO_UNINSTALL_REG_PATH)
+        return True
+    except OSError:
+        return False
 
 
 def default_windows_install_dir() -> Path:
@@ -114,6 +128,9 @@ def clean_installed_app(
         data_purged = True
         if not dry_run:
             shutil.rmtree(target_data, ignore_errors=True)
+
+    if not dry_run:
+        _clear_inno_uninstall_registry()
 
     return {
         "dry_run": dry_run,

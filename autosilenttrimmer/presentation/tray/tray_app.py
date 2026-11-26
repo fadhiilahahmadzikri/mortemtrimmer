@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 def _create_tray_icon_image() -> Image.Image:
-    """Load the Mortem Primer blade emblem bitmap or draw a gold-and-brown fallback."""
+    """Load the Mortem Trimmer blade emblem bitmap or draw a gold-and-brown fallback."""
     tray_asset = resolve_asset_path("mortem_tray.png")
     if tray_asset is not None:
         return Image.open(tray_asset).convert("RGBA")
@@ -179,7 +179,7 @@ class PystrayTrayUI(ITrayUI):
         )
 
         self._icon = pystray.Icon(
-            "MortemPrimer",
+            "MortemTrimmer",
             _create_tray_icon_image(),
             title=self._status_text,
             menu=menu,

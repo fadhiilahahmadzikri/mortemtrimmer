@@ -134,7 +134,7 @@ exe = EXE(
     icon=APP_ICON,
     version=build_windows_version_info(
         original_filename="autosilenttrimmer.exe",
-        internal_name="MortemPrimer",
+        internal_name="MortemTrimmer",
     ),
 )
 
@@ -154,7 +154,7 @@ cli_exe = EXE(
     icon=APP_ICON,
     version=build_windows_version_info(
         original_filename="autosilenttrimmer-cli.exe",
-        internal_name="MortemPrimerCLI",
+        internal_name="MortemTrimmerCLI",
     ),
 )
 

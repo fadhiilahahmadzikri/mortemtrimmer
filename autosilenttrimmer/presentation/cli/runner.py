@@ -30,7 +30,10 @@ from autosilenttrimmer.core.constants import (
 )
 from autosilenttrimmer.core.exceptions import AutoSilentTrimmerException
 from autosilenttrimmer.core.i18n import Localizer, detect_system_language
-from autosilenttrimmer.domain.models.processing_command import ProcessMediaCommand
+from autosilenttrimmer.domain.models.processing_command import (
+    DestinationPromptRequest,
+    ProcessMediaCommand,
+)
 from autosilenttrimmer.infrastructure.compute.backend_selector import PolicyComputeBackend
 from autosilenttrimmer.infrastructure.compute.capability_prober import (
     CrossPlatformCapabilityProber,
@@ -96,13 +99,17 @@ def _resolve_shim_executable() -> str:
     return sys.executable
 
 
-def _spawn_detached(cli_flags: list[str]) -> None:
-    """Launch detached sibling process cleanly without console window flash."""
+def _build_self_command(cli_flags: list[str]) -> list[str]:
+    """Build subprocess command targeting frozen executable or current Python module."""
     exe = sys.executable
     if getattr(sys, "frozen", False):
-        cmd = [exe, *cli_flags]
-    else:
-        cmd = [exe, "-m", "autosilenttrimmer", *cli_flags]
+        return [exe, *cli_flags]
+    return [exe, "-m", "autosilenttrimmer", *cli_flags]
+
+
+def _spawn_detached(cli_flags: list[str]) -> None:
+    """Launch detached sibling process cleanly without console window flash."""
+    cmd = _build_self_command(cli_flags)
 
     kwargs: dict[str, object] = {}
     if os.name == "nt":
@@ -203,11 +210,25 @@ def run_cli(args: list[str] | None = None) -> int:
                 on_open_tune=lambda: _spawn_detached(["--tune"]),
             )
 
-        # 3c. About Mortem Primer Dialog (--about)
+        # 3c. About Mortem Trimmer Dialog (--about)
         if parsed.about:
             from autosilenttrimmer.presentation.about_entry import run_about_ui
 
             return run_about_ui()
+
+        # 3d. Native OS destination folder picker subprocess (--pick-folder)
+        if parsed.pick_folder:
+            from autosilenttrimmer.presentation.folder_picker import run_pick_folder_cli
+
+            return run_pick_folder_cli(
+                localizer,
+                initial_dir=parsed.initial_dir,
+                reason=parsed.pick_reason,
+                target_path=parsed.target_path,
+                free_bytes=parsed.free_bytes,
+                required_bytes=parsed.required_bytes,
+                result_file=parsed.pick_result_file,
+            )
 
         # 4. Runtime Pack Setup / Offline Install
         if parsed.setup_runtime:
@@ -248,6 +269,21 @@ def run_cli(args: list[str] | None = None) -> int:
             locator=locator,
             localizer=localizer,
         )
+
+        def _prompt_low_disk(req: DestinationPromptRequest) -> str | None:
+            from autosilenttrimmer.presentation.folder_picker import (
+                prompt_destination_via_subprocess,
+            )
+
+            return prompt_destination_via_subprocess(
+                _build_self_command([]),
+                initial_dir=os.path.dirname(req.target_path) or os.path.dirname(req.source_path),
+                low_disk=True,
+                target_path=req.target_path,
+                free_bytes=req.free_bytes,
+                required_bytes=req.required_bytes,
+            )
+
         orchestrator = JobOrchestrator(
             media_manager=comps.media_manager,
             media_prober=PyAVMediaProber(),
@@ -262,6 +298,7 @@ def run_cli(args: list[str] | None = None) -> int:
             notifier=comps.notifier,
             manifest_repo=JsonJobManifestRepository(paths.jobs_dir),
             priority_ctrl=comps.priority_ctrl,
+            on_destination_needed=(_prompt_low_disk if (parsed.daemon and parsed.tray) else None),
         )
 
         # 8. Persistent background daemon mode (--daemon [--tray])
@@ -304,9 +341,36 @@ def run_cli(args: list[str] | None = None) -> int:
             def _on_batch(batch_paths: list[str]) -> None:
                 logger.info("IPC batch dispatched (%d file(s)): %s", len(batch_paths), batch_paths)
                 cur = _reload_daemon_settings()
+                chosen_dir: str | None = None
+                if parsed.tray and batch_paths:
+                    from autosilenttrimmer.presentation.folder_picker import (
+                        prompt_destination_via_subprocess,
+                    )
+
+                    default_dir = (
+                        cur.output_custom_dir  # type: ignore[attr-defined]
+                        if (
+                            cur.output_location != "beside-source"  # type: ignore[attr-defined]
+                            and cur.output_custom_dir  # type: ignore[attr-defined]
+                            and os.path.isdir(cur.output_custom_dir)  # type: ignore[attr-defined]
+                        )
+                        else os.path.dirname(os.path.abspath(batch_paths[0]))
+                    )
+                    chosen_dir = prompt_destination_via_subprocess(
+                        _build_self_command([]),
+                        initial_dir=default_dir,
+                    )
+                    if not chosen_dir:
+                        logger.info(
+                            "Destination selection cancelled; skipped %d queued file(s).",
+                            len(batch_paths),
+                        )
+                        return
+
                 cmds = [
                     ProcessMediaCommand(
                         input_path=p,
+                        output_dir=chosen_dir,
                         strategy=cur.trim_strategy,  # type: ignore[attr-defined]
                         vad_method=cur.vad_engine,  # type: ignore[attr-defined]
                         noise_reduction_method=cur.noise_reduction_method,  # type: ignore[attr-defined]

@@ -87,6 +87,6 @@ exe = EXE(
     version=build_windows_version_info(
         original_filename="trim-shim.exe",
         internal_name="MortemTrimShim",
-        file_description="Mortem Primer Explorer Context Menu Launcher",
+        file_description="Mortem Trimmer Explorer Context Menu Launcher",
     ),
 )

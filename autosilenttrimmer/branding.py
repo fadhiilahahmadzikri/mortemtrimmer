@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 APP_SHORT_NAME: str = "Mortem"
-APP_NAME: str = "Mortem Primer"
+APP_NAME: str = "Mortem Trimmer"
 APP_VERSION: str = "1.0.0"
 APP_DESCRIPTION: str = "AI-Powered Silence Remover & Noise Reduction Production Suite"
 

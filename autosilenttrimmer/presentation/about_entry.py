@@ -13,7 +13,7 @@ from autosilenttrimmer.presentation.qt_app import apply_dark_palette
 
 
 def run_about_ui() -> int:
-    """Open Mortem Primer About dialog as standalone GUI entrypoint."""
+    """Open Mortem Trimmer About dialog as standalone GUI entrypoint."""
     app = QApplication.instance() or QApplication(sys.argv[:1])
     assert isinstance(app, QApplication)
     apply_dark_palette(app)

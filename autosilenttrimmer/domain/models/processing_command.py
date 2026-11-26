@@ -27,6 +27,7 @@ class ProcessMediaCommand:
 
     input_path: str
     output_path: str | None = None
+    output_dir: str | None = None
     noise_reduction_method: str = DEFAULT_NOISE_REDUCTION_METHOD
     vad_method: str = DEFAULT_VAD_METHOD
     min_silence_gap: float = DEFAULT_MIN_SILENCE_GAP_SEC
@@ -39,3 +40,13 @@ class ProcessMediaCommand:
     output_location: str = DEFAULT_OUTPUT_LOCATION
     output_naming_template: str = DEFAULT_OUTPUT_NAMING_TEMPLATE
     strategy_params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class DestinationPromptRequest:
+    """Context passed to interactive destination selector when a target drive lacks space."""
+
+    source_path: str
+    target_path: str
+    free_bytes: int
+    required_bytes: int

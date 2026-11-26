@@ -151,6 +151,237 @@ def test_output_path_resolver_non_destructive_and_increments(tmp_path: Path) -> 
     second = OutputPathResolver.resolve(str(src), policy=OutputPolicyConfig())
     assert second.endswith("interview.trimmed_1.mp4")
 
+    custom_dir = tmp_path / "project_exports"
+    overridden = OutputPathResolver.resolve(
+        str(src),
+        policy=OutputPolicyConfig(),
+        output_dir=str(custom_dir),
+    )
+    assert Path(overridden).parent == custom_dir
+    assert Path(overridden).name == "interview.trimmed.mp4"
+
+
+def test_resolve_with_disk_guard_prompts_and_relocates_off_full_volume(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Disk guard checks target volume and relocates via prompt callback when full."""
+    import os
+    import shutil
+    from collections import namedtuple
+
+    from autosilenttrimmer.core.exceptions import DiskFullException, JobCancelledException
+    from autosilenttrimmer.domain.models.processing_command import (
+        DestinationPromptRequest,
+        ProcessMediaCommand,
+    )
+
+    Usage = namedtuple("Usage", ["total", "used", "free"])
+    full_dir = tmp_path / "full_drive"
+    spacious_dir = tmp_path / "spacious_drive"
+    full_dir.mkdir()
+    spacious_dir.mkdir()
+    src = full_dir / "big.mp4"
+    src.write_bytes(b"video")
+
+    def _fake_disk_usage(path: str) -> Usage:
+        norm = os.path.normcase(os.path.abspath(path))
+        if norm.startswith(os.path.normcase(str(spacious_dir))):
+            return Usage(total=10 * 1024**3, used=1 * 1024**3, free=9 * 1024**3)
+        return Usage(total=10 * 1024**3, used=10 * 1024**3, free=5 * 1024**2)
+
+    monkeypatch.setattr(shutil, "disk_usage", _fake_disk_usage)
+
+    probe = MediaProbeInfo(
+        path=str(src),
+        container_format="mp4",
+        extension=".mp4",
+        duration_sec=10.0,
+        file_size_bytes=500 * 1024**2,
+        is_video=True,
+    )
+    cmd = ProcessMediaCommand(input_path=str(src))
+
+    with pytest.raises(DiskFullException):
+        OutputPathResolver.resolve_with_disk_guard(
+            probe=probe, command=cmd, policy=OutputPolicyConfig(), on_destination_needed=None
+        )
+
+    prompts: list[DestinationPromptRequest] = []
+
+    def _pick_spacious(req: DestinationPromptRequest) -> str:
+        prompts.append(req)
+        return str(spacious_dir)
+
+    relocated = OutputPathResolver.resolve_with_disk_guard(
+        probe=probe, command=cmd, policy=OutputPolicyConfig(), on_destination_needed=_pick_spacious
+    )
+    assert Path(relocated).parent == spacious_dir
+    assert Path(relocated).name == "big.trimmed.mp4"
+    assert len(prompts) == 1
+    assert Path(prompts[0].target_path).parent == full_dir
+
+    with pytest.raises(JobCancelledException):
+        OutputPathResolver.resolve_with_disk_guard(
+            probe=probe,
+            command=cmd,
+            policy=OutputPolicyConfig(),
+            on_destination_needed=lambda _req: None,
+        )
+
+
+def test_job_orchestrator_places_work_dir_on_relocated_destination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """JobOrchestrator creates temp_work_dir on chosen destination drive after low-disk redirect."""
+    import os
+    import shutil
+    import tempfile
+    from collections import namedtuple
+
+    from autosilenttrimmer.application.use_cases.job_orchestrator import JobOrchestrator
+    from autosilenttrimmer.core.config import MediaProcessingConfig
+    from autosilenttrimmer.domain.contracts.compute import ICapabilityProber, IComputeBackend
+    from autosilenttrimmer.domain.contracts.media_manager import IMediaManager
+    from autosilenttrimmer.domain.contracts.media_prober import IMediaProber
+    from autosilenttrimmer.domain.contracts.media_verifier import (
+        IMediaVerifier,
+        VerificationReport,
+    )
+    from autosilenttrimmer.domain.contracts.trim_strategy import ITrimStrategy
+    from autosilenttrimmer.domain.models.compute import ComputePolicy
+    from autosilenttrimmer.domain.models.processing_command import ProcessMediaCommand
+    from autosilenttrimmer.infrastructure.events.in_memory_bus import InMemoryEventBus
+
+    Usage = namedtuple("Usage", ["total", "used", "free"])
+    src_dir = tmp_path / "full_c"
+    alt_dir = tmp_path / "spacious_d"
+    src_dir.mkdir()
+    alt_dir.mkdir()
+    src = src_dir / "clip.mp4"
+    src.write_bytes(b"source-bytes")
+
+    monkeypatch.setattr(
+        shutil,
+        "disk_usage",
+        lambda p: (
+            Usage(total=10 * 1024**3, used=1 * 1024**3, free=9 * 1024**3)
+            if os.path.normcase(os.path.abspath(p)).startswith(os.path.normcase(str(alt_dir)))
+            else Usage(total=10 * 1024**3, used=10 * 1024**3, free=1024)
+        ),
+    )
+
+    mkdtemp_dirs: list[str] = []
+    real_mkdtemp = tempfile.mkdtemp
+
+    def _spy_mkdtemp(*args, **kwargs) -> str:
+        if kwargs.get("dir"):
+            mkdtemp_dirs.append(str(kwargs["dir"]))
+        return real_mkdtemp(*args, **kwargs)
+
+    monkeypatch.setattr(tempfile, "mkdtemp", _spy_mkdtemp)
+
+    class _Prober(IMediaProber):
+        def probe(self, path: str) -> MediaProbeInfo:
+            return MediaProbeInfo(
+                path=path,
+                container_format="mp4",
+                extension=".mp4",
+                duration_sec=5.0,
+                file_size_bytes=src.stat().st_size,
+                is_video=True,
+                video_streams=(StreamSummary(index=0, media_type="video", codec_name="h264"),),
+                audio_streams=(StreamSummary(index=1, media_type="audio", codec_name="aac"),),
+            )
+
+    class _Mgr(IMediaManager):
+        def extract_audio(self, source_media_path: str, destination_audio_path: str) -> None:
+            Path(destination_audio_path).write_bytes(b"wav")
+
+        def slice_and_concat(
+            self,
+            media_path: str,
+            segments: list[MediaSegment],
+            output_path: str,
+            *,
+            video_encoder: str = "libx264",
+            copy_mode: bool = False,
+        ) -> None:
+            Path(output_path).write_bytes(b"chunk")
+
+        def concat_files(self, chunk_paths: list[str], output_path: str, is_video: bool) -> None:
+            Path(output_path).write_bytes(b"merged")
+
+        def merge_audio(self, video_path: str, clean_audio_path: str, output_path: str) -> None:
+            Path(output_path).write_bytes(b"staged")
+
+        def export_audio(self, clean_audio_path: str, output_path: str) -> None:
+            Path(output_path).write_bytes(b"audio")
+
+    class _Strategy(ITrimStrategy):
+        @property
+        def strategy_id(self) -> str:
+            return "stub"
+
+        @property
+        def requires_frame_accuracy(self) -> bool:
+            return False
+
+        def plan_keep_segments(self, probe_info, audio_path=None, manifest_path=None, params=None):
+            return [MediaSegment(start=0.0, end=3.0)]
+
+    class _Caps(ICapabilityProber):
+        def probe(self) -> ComputeCapabilities:
+            return ComputeCapabilities(
+                platform_spec=PlatformSpec(os_name="windows", arch="x86_64"),
+                logical_cores=4,
+                physical_cores=4,
+                total_ram_bytes=8 * 1024**3,
+                available_ram_bytes=4 * 1024**3,
+                ai_device="cpu",
+                hw_video_encoders=(),
+            )
+
+    class _Backend(IComputeBackend):
+        def select_backend(self, policy, ffmpeg_path, requested_max_workers=None):
+            return BackendSelection(
+                backend_id="cpu",
+                ai_device="cpu",
+                video_encoder="libx264",
+                max_concurrency=1,
+                is_gpu=False,
+                reason="ok",
+            )
+
+        def fallback_to_cpu(self, reason: str):
+            return self.select_backend(ComputePolicy.CPU_ONLY, "")
+
+    class _Verifier(IMediaVerifier):
+        def verify(self, *args, **kwargs) -> VerificationReport:
+            return VerificationReport(
+                passed=True,
+                actual_duration_sec=3.0,
+                expected_duration_sec=3.0,
+                streams_matched=True,
+                decode_samples_checked=2,
+            )
+
+    orch = JobOrchestrator(
+        media_manager=_Mgr(),
+        media_prober=_Prober(),
+        media_verifier=_Verifier(),
+        trim_strategy=_Strategy(),
+        capability_prober=_Caps(),
+        compute_backend=_Backend(),
+        event_bus=InMemoryEventBus(),
+        config=MediaProcessingConfig(),
+        on_destination_needed=lambda _req: str(alt_dir),
+    )
+
+    result = orch.execute_job(ProcessMediaCommand(input_path=str(src)))
+    assert Path(result.output_path).parent == alt_dir
+    assert Path(result.output_path).is_file()
+    assert mkdtemp_dirs == [str(alt_dir)]
+
 
 def test_bilingual_i18n_catalog_parity() -> None:
     assert set(MESSAGES_EN.keys()) == set(MESSAGES_ID.keys())

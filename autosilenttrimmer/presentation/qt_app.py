@@ -25,7 +25,7 @@ from autosilenttrimmer.presentation.theme import (
 
 
 def apply_dark_palette(app: QApplication) -> None:
-    """Apply gold-and-warm-brown Mortem Primer theme uniformly across PyQt6 windows."""
+    """Apply gold-and-warm-brown Mortem Trimmer theme uniformly across PyQt6 windows."""
     app.setStyle("Fusion")
     pal = QPalette()
     pal.setColor(QPalette.ColorRole.Window, QColor(*PALETTE_WINDOW_RGB))

@@ -14,7 +14,7 @@ BUNDLED_ATTRIBUTION_SECTION = """
 BUNDLED ASSETS, PRETRAINED MODELS, AND EXTERNAL TOOLS
 ================================================================================
 The components below are third-party open-source dependencies, pretrained
-weights, iconography, or binaries bundled separately from Mortem Primer's own
+weights, iconography, or binaries bundled separately from Mortem Trimmer's own
 source copyright. Their respective licenses and notices apply intact:
 
 - GitHub Octicons (`mark-github` SVG icon)

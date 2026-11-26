@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Fadhiilah Ahmad Zikri
-"""Lightweight gold-and-warm-brown Tkinter progress overlay popup for Mortem Primer."""
+"""Lightweight gold-and-warm-brown Tkinter progress overlay popup for Mortem Trimmer."""
 
 from __future__ import annotations
 

@@ -11,6 +11,7 @@ import shutil
 import tempfile
 import threading
 import time
+from collections.abc import Callable
 
 import soundfile as sf
 
@@ -27,7 +28,6 @@ from autosilenttrimmer.core.constants import (
     MANIFEST_SUFFIX,
     TEMP_AUDIO_SUFFIX,
     TEMP_VIDEO_SUFFIX,
-    VIDEO_EXTENSIONS,
 )
 from autosilenttrimmer.core.exceptions import (
     AutoSilentTrimmerException,
@@ -55,7 +55,10 @@ from autosilenttrimmer.domain.entities.job import Job, JobState
 from autosilenttrimmer.domain.models.compute import ComputePolicy
 from autosilenttrimmer.domain.models.events import JobCancelled, JobQueued
 from autosilenttrimmer.domain.models.media_probe import MediaProbeInfo
-from autosilenttrimmer.domain.models.processing_command import ProcessMediaCommand
+from autosilenttrimmer.domain.models.processing_command import (
+    DestinationPromptRequest,
+    ProcessMediaCommand,
+)
 from autosilenttrimmer.domain.models.processing_result import ProcessingResult
 
 logger = logging.getLogger(__name__)
@@ -80,6 +83,7 @@ class JobOrchestrator:
         notifier: INotifier | None = None,
         manifest_repo: IJobManifestRepository | None = None,
         priority_ctrl: IProcessPriorityController | None = None,
+        on_destination_needed: Callable[[DestinationPromptRequest], str | None] | None = None,
     ) -> None:
         self._media_manager = media_manager
         self._prober = media_prober
@@ -94,6 +98,7 @@ class JobOrchestrator:
         self._notifier = notifier
         self._manifest_repo = manifest_repo
         self._priority_ctrl = priority_ctrl
+        self._on_destination_needed = on_destination_needed
         self._planner = ExecutionPlanner()
         self._worker_pool = ChunkWorkerPool(
             media_manager=media_manager,
@@ -206,17 +211,26 @@ class JobOrchestrator:
 
         job = Job(source_path=os.path.abspath(command.input_path), strategy=command.strategy)
         staging_path: str | None = None
-        temp_work_dir = tempfile.mkdtemp(prefix="trimjob_")
+        temp_work_dir: str | None = None
         t_start = time.monotonic()
 
         try:
             logger.info(
                 "Job %s started (strategy=%s): %s", job.job_id[:8], job.strategy, job.source_path
             )
-            probe = self._run_probe_stage(job, command)
-            final_output = self._resolve_non_destructive_output(probe, command)
+            probe = self._run_probe_stage(job)
+            final_output = OutputPathResolver.resolve_with_disk_guard(
+                probe=probe,
+                command=command,
+                policy=self._config.output_policy,
+                on_destination_needed=self._on_destination_needed,
+            )
             job.output_path = final_output
             staging_path = OutputPathResolver.make_staging_path(final_output, job.job_id)
+            temp_work_dir = tempfile.mkdtemp(
+                prefix="trimjob_",
+                dir=os.path.dirname(os.path.abspath(final_output)),
+            )
 
             raw_audio = os.path.join(temp_work_dir, f"raw{TEMP_AUDIO_SUFFIX}")
             keep_segments, manifest_path = self._run_plan_stage(
@@ -334,9 +348,10 @@ class JobOrchestrator:
         finally:
             if staging_path and os.path.exists(staging_path):
                 os.remove(staging_path)
-            shutil.rmtree(temp_work_dir, ignore_errors=True)
+            if temp_work_dir:
+                shutil.rmtree(temp_work_dir, ignore_errors=True)
 
-    def _run_probe_stage(self, job: Job, command: ProcessMediaCommand) -> MediaProbeInfo:
+    def _run_probe_stage(self, job: Job) -> MediaProbeInfo:
         self._transition(job, JobState.PROBING)
         probe = self._prober.probe(job.source_path)
         if not probe.is_seekable:
@@ -346,24 +361,7 @@ class JobOrchestrator:
         job.total_duration = probe.duration_sec
         job.source_size = probe.file_size_bytes
         job.source_mtime = os.path.getmtime(job.source_path)
-        OutputPathResolver.ensure_disk_space(
-            command.output_path or job.source_path,
-            probe.file_size_bytes,
-            safety_factor=self._config.output_policy.disk_space_safety_factor,
-        )
         return probe
-
-    def _resolve_non_destructive_output(
-        self, probe: MediaProbeInfo, command: ProcessMediaCommand
-    ) -> str:
-        policy = self._config.output_policy
-        if command.output_path:
-            out_ext = os.path.splitext(command.output_path.lower())[1]
-            if not probe.is_video and out_ext and out_ext in VIDEO_EXTENSIONS:
-                raise FormatMismatchException(
-                    f"Input is audio '{probe.extension}' but output '{out_ext}' is video."
-                )
-        return OutputPathResolver.resolve(probe.path, command.output_path, policy)
 
     def _run_plan_stage(
         self,

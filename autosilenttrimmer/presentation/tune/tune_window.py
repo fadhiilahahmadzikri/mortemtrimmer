@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Fadhiilah Ahmad Zikri
-"""Minimal PyQt6 tabbed settings inspector for Mortem Primer."""
+"""Minimal PyQt6 tabbed settings inspector for Mortem Trimmer."""
 
 from __future__ import annotations
 
@@ -167,7 +167,7 @@ class TuneWindow(QMainWindow):
         page = QWidget(scroll)
         page.setObjectName("scrollPage")
         page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(12, 12, 12, 12)
+        page_layout.setContentsMargins(0, 12, 0, 4)
         page_layout.setSpacing(12)
 
         grouped: dict[str, list[SettingFieldSpec]] = {}

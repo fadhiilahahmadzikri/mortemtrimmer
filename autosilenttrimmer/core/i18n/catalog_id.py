@@ -8,9 +8,9 @@ from types import MappingProxyType
 
 MESSAGES_ID: MappingProxyType[str, str] = MappingProxyType(
     {
-        "app.title": "Mortem Primer",
+        "app.title": "Mortem Trimmer",
         "shell.menu_label": "Trim This Video",
-        "tray.status_idle": "Mortem Primer — Siap",
+        "tray.status_idle": "Mortem Trimmer — Siap",
         "tray.status_queued": "Dalam Antrean — {filename}",
         "tray.status_running": "Memproses ({percent:.0f}%) — {filename}",
         "tray.status_paused": "Dijeda — {filename}",
@@ -23,10 +23,10 @@ MESSAGES_ID: MappingProxyType[str, str] = MappingProxyType(
         "tray.action_cancel": "Batalkan Tugas Saat Ini",
         "tray.action_export_diag": "Ekspor Diagnostik",
         "tray.action_language": "Bahasa (EN / ID)",
-        "tray.action_about": "Tentang Mortem Primer",
+        "tray.action_about": "Tentang Mortem Trimmer",
         "tray.action_github": "Repositori GitHub",
         "tray.action_quit": "Keluar",
-        "popup.title": "Mortem Primer",
+        "popup.title": "Mortem Trimmer",
         "popup.queued": "{stage}...",
         "popup.stage": "Tahap: {stage}...",
         "popup.eta": "Estimasi sisa: {eta}",
@@ -54,8 +54,17 @@ MESSAGES_ID: MappingProxyType[str, str] = MappingProxyType(
         "error.cancelled_by_user": "Proses dibatalkan oleh pengguna.",
         "error.media_not_found": "File media sumber tidak ditemukan.",
         "error.manifest_invalid": "Validasi checksum atau tanda tangan digital manifest gagal.",
-        "error.ipc_failed": "Gagal terhubung ke layanan latar belakang Mortem Primer.",
+        "error.ipc_failed": "Gagal terhubung ke layanan latar belakang Mortem Trimmer.",
         "error.dependency_missing": "Komponen dependensi opsional yang diperlukan belum terpasang.",
         "error.internal_error": "Terjadi kesalahan internal yang tidak terduga.",
+        "dialog.choose_output_title": "Di mana Anda ingin menyimpan proyek ini?",
+        "dialog.disk_full_title": "Ruang Disk Rendah di {drive}",
+        "dialog.disk_full_body": (
+            "Drive {drive} tidak memiliki ruang penyimpanan kosong yang cukup "
+            "({free_gb} tersedia, {required_gb} disarankan). "
+            "Di mana Anda ingin menyimpan proyek ini?"
+        ),
+        "dialog.choose_folder_btn": "Pilih Folder...",
+        "dialog.cancel_btn": "Batal",
     }
 )

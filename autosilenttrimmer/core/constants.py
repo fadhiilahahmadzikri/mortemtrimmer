@@ -22,7 +22,7 @@ from autosilenttrimmer.branding import (
 # Application identity
 SHELL_CONTEXT_MENU_LABEL: str = "Trim This Video"
 APP_SLUG: str = "autosilenttrimmer"
-APP_USER_MODEL_ID: str = "MortemPrimer.DesktopApp.1"
+APP_USER_MODEL_ID: str = "MortemTrimmer.DesktopApp.1"
 DEFAULT_LANGUAGE: str = "en"
 SUPPORTED_LANGUAGES: frozenset[str] = frozenset({"en", "id"})
 

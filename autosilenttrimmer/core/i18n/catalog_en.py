@@ -8,9 +8,9 @@ from types import MappingProxyType
 
 MESSAGES_EN: MappingProxyType[str, str] = MappingProxyType(
     {
-        "app.title": "Mortem Primer",
+        "app.title": "Mortem Trimmer",
         "shell.menu_label": "Trim This Video",
-        "tray.status_idle": "Mortem Primer — Ready",
+        "tray.status_idle": "Mortem Trimmer — Ready",
         "tray.status_queued": "Queued — {filename}",
         "tray.status_running": "Processing ({percent:.0f}%) — {filename}",
         "tray.status_paused": "Paused — {filename}",
@@ -23,10 +23,10 @@ MESSAGES_EN: MappingProxyType[str, str] = MappingProxyType(
         "tray.action_cancel": "Cancel Current Job",
         "tray.action_export_diag": "Export Diagnostics",
         "tray.action_language": "Language (EN / ID)",
-        "tray.action_about": "About Mortem Primer",
+        "tray.action_about": "About Mortem Trimmer",
         "tray.action_github": "GitHub Repository",
         "tray.action_quit": "Exit",
-        "popup.title": "Mortem Primer",
+        "popup.title": "Mortem Trimmer",
         "popup.queued": "{stage}...",
         "popup.stage": "Stage: {stage}...",
         "popup.eta": "Remaining: {eta}",
@@ -54,8 +54,17 @@ MESSAGES_EN: MappingProxyType[str, str] = MappingProxyType(
         "error.cancelled_by_user": "Job was cancelled by user request.",
         "error.media_not_found": "Source media file was not found.",
         "error.manifest_invalid": "Runtime manifest checksum or signature validation failed.",
-        "error.ipc_failed": "Could not communicate with the Mortem Primer background service.",
+        "error.ipc_failed": "Could not communicate with the Mortem Trimmer background service.",
         "error.dependency_missing": "A required optional dependency is not installed.",
         "error.internal_error": "An unexpected internal error occurred.",
+        "dialog.choose_output_title": "Where would you like to save this project?",
+        "dialog.disk_full_title": "Low Disk Space on {drive}",
+        "dialog.disk_full_body": (
+            "Drive {drive} does not have enough free disk space "
+            "({free_gb} available, {required_gb} recommended). "
+            "Where would you like to save this project?"
+        ),
+        "dialog.choose_folder_btn": "Choose Folder...",
+        "dialog.cancel_btn": "Cancel",
     }
 )

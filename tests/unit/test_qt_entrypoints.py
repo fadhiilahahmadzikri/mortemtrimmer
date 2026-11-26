@@ -68,7 +68,7 @@ def test_mortem_branding_and_zero_underscores_in_ui_presentation(
     from PyQt6.QtWidgets import QComboBox
 
     assert APP_SHORT_NAME == "Mortem"
-    assert APP_NAME == "Mortem Primer"
+    assert APP_NAME == "Mortem Trimmer"
     assert SHELL_CONTEXT_MENU_LABEL == "Trim This Video"
     assert resolve_asset_path("mortem_icon.png") is not None
     assert resolve_asset_path("mortem_tray.png") is not None
@@ -96,7 +96,11 @@ def test_mortem_branding_and_zero_underscores_in_ui_presentation(
         settings_file_path=str(tmp_path / "settings.json"),
     )
     try:
-        assert "Mortem Primer" in win.windowTitle()
+        assert "Mortem Trimmer" in win.windowTitle()
+        page_widget = win._tabs.widget(0).widget()
+        assert page_widget is not None
+        assert page_widget.layout().contentsMargins().left() == 0
+        assert "border: none;" in app.styleSheet()
         for combo in win.findChildren(QComboBox):
             for idx in range(combo.count()):
                 assert "_" not in combo.itemText(idx)
@@ -189,3 +193,117 @@ def test_run_cli_check_readiness_hermetic(
     captured = capsys.readouterr()
     assert rc == 0
     assert "READY FOR INFERENCE" in captured.out
+
+
+def test_folder_picker_native_dialog_and_low_disk_wizard(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify right-click native folder picker & low-disk wizard reuse QFileDialog cleanly."""
+    from autosilenttrimmer.core.i18n import Localizer
+    from autosilenttrimmer.presentation import folder_picker
+    from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    _get_offscreen_app()
+
+    dest_dir = tmp_path / "picked_project"
+    dest_dir.mkdir()
+    seen_titles: list[str] = []
+
+    def _fake_get_dir(_parent, title: str, _initial: str) -> str:
+        seen_titles.append(title)
+        return str(dest_dir)
+
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", _fake_get_dir)
+
+    picked = folder_picker.pick_destination_directory(
+        Localizer("en"),
+        initial_dir=str(tmp_path),
+    )
+    assert picked == str(dest_dir.resolve())
+    assert seen_titles == ["Where would you like to save this project?"]
+
+    # Simulate low-disk wizard: clicking Cancel aborts without calling folder dialog
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: 0)
+    monkeypatch.setattr(QMessageBox, "clickedButton", lambda self: None)
+    assert (
+        folder_picker.pick_destination_directory(
+            Localizer("en"),
+            low_disk=True,
+            target_path=str(tmp_path / "clip.trimmed.mp4"),
+            free_bytes=50 * 1024**2,
+            required_bytes=500 * 1024**2,
+        )
+        is None
+    )
+
+    # Simulate low-disk wizard: accepting opens QFileDialog and writes result file via CLI
+    def _fake_exec_choose(msg_self: QMessageBox) -> int:
+        for btn in msg_self.buttons():
+            if "Choose" in btn.text():
+                msg_self.setDefaultButton(btn)
+                monkeypatch.setattr(QMessageBox, "clickedButton", lambda _s, b=btn: b)
+                break
+        return 0
+
+    monkeypatch.setattr(QMessageBox, "exec", _fake_exec_choose)
+    result_file = tmp_path / "picked.txt"
+    rc = folder_picker.run_pick_folder_cli(
+        Localizer("en"),
+        initial_dir=str(tmp_path),
+        reason="low-disk",
+        target_path=str(tmp_path / "clip.trimmed.mp4"),
+        free_bytes=10 * 1024**2,
+        required_bytes=500 * 1024**2,
+        result_file=str(result_file),
+    )
+    assert rc == 0
+    assert result_file.read_text(encoding="utf-8").strip() == str(dest_dir.resolve())
+
+    cli_result = tmp_path / "cli_picked.txt"
+    monkeypatch.setenv("AUTOSILENTTRIMMER_DATA_DIR", str(tmp_path / "appdata"))
+    try:
+        rc_cli = run_cli(
+            [
+                "--pick-folder",
+                "--initial-dir",
+                str(tmp_path),
+                "--pick-result-file",
+                str(cli_result),
+            ]
+        )
+    finally:
+        for handler in list(logging.getLogger().handlers):
+            handler.close()
+            logging.getLogger().removeHandler(handler)
+    assert rc_cli == 0
+    assert cli_result.read_text(encoding="utf-8").strip() == str(dest_dir.resolve())
+
+    # Subprocess wrapper reads UTF-8 result file cleanly and deletes temp file afterwards
+    captured_cmds: list[list[str]] = []
+
+    def _fake_subproc(cmd: list[str], **_kwargs):
+        from pathlib import Path as _P
+        from types import SimpleNamespace
+
+        captured_cmds.append(cmd)
+        idx = cmd.index("--pick-result-file")
+        _P(cmd[idx + 1]).write_text(str(dest_dir), encoding="utf-8")
+        return SimpleNamespace(returncode=0)
+
+    import subprocess
+
+    monkeypatch.setattr(subprocess, "run", _fake_subproc)
+    sub_picked = folder_picker.prompt_destination_via_subprocess(
+        ["python", "-m", "autosilenttrimmer"],
+        initial_dir=str(tmp_path),
+        low_disk=True,
+        target_path=str(tmp_path / "out.mp4"),
+        free_bytes=1024,
+        required_bytes=4096,
+    )
+    assert sub_picked == str(dest_dir.resolve())
+    assert "--pick-folder" in captured_cmds[0]
+    assert "--pick-reason" in captured_cmds[0]
+    tmp_result_path = Path(captured_cmds[0][captured_cmds[0].index("--pick-result-file") + 1])
+    assert not tmp_result_path.exists()

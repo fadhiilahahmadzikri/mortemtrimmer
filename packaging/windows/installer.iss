@@ -1,6 +1,6 @@
-; Inno Setup 6 Per-User Installer for Mortem Primer ("Mortem")
+; Inno Setup 6 Per-User Installer for Mortem Trimmer ("Mortem")
 
-#define MyAppName "Mortem Primer"
+#define MyAppName "Mortem Trimmer"
 #define MyAppShortName "Mortem"
 #define MyAppPublisher "Fadhiilah Ahmad Zikri"
 #define MyAppPublisherURL "https://github.com/fadhiilahahmadzikri"
@@ -10,7 +10,7 @@
 #define MyAppVersion "1.0.0"
 #define MyAppExeName "autosilenttrimmer.exe"
 #define MyAppShimExeName "trim-shim.exe"
-#define MyAppUserModelID "MortemPrimer.DesktopApp.1"
+#define MyAppUserModelID "MortemTrimmer.DesktopApp.1"
 
 [Setup]
 AppId={{B4E73E3A-9C2F-4F91-A72E-83D18D410F12}
@@ -25,10 +25,11 @@ DefaultDirName={localappdata}\Programs\AutoSilentTrimmer
 DefaultGroupName={#MyAppName}
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
+UsePreviousTasks=no
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\..\dist\installer
-OutputBaseFilename=MortemPrimer-Setup-{#MyAppVersion}-win-x64
+OutputBaseFilename=MortemTrimmer-Setup-{#MyAppVersion}-win-x64
 SetupIconFile=..\..\packaging\windows\mortem.ico
 Compression=lzma2
 SolidCompression=yes

@@ -209,8 +209,8 @@ jobs:
           name: windows-installer
           retention-days: 14
           path: |
-            dist/installer/MortemPrimer-Setup-*.exe
-            dist/installer/MortemPrimer-Setup-*.exe.sha256
+            dist/installer/MortemTrimmer-Setup-*.exe
+            dist/installer/MortemTrimmer-Setup-*.exe.sha256
 
   verify:
     name: Clean-Room Frozen & Silent Install Smoke Test
@@ -257,5 +257,5 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            dist/installer/MortemPrimer-Setup-*.exe
-            dist/installer/MortemPrimer-Setup-*.exe.sha256
+            dist/installer/MortemTrimmer-Setup-*.exe
+            dist/installer/MortemTrimmer-Setup-*.exe.sha256

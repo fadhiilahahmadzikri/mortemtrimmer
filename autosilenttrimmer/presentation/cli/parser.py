@@ -38,8 +38,20 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--about",
         action="store_true",
-        help="Open the PyQt6 About Mortem Primer dialog",
+        help="Open the PyQt6 About Mortem Trimmer dialog",
     )
+    parser.add_argument("--pick-folder", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--pick-reason",
+        choices=["normal", "low-disk"],
+        default="normal",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument("--initial-dir", type=str, default="", help=argparse.SUPPRESS)
+    parser.add_argument("--target-path", type=str, default="", help=argparse.SUPPRESS)
+    parser.add_argument("--free-bytes", type=int, default=0, help=argparse.SUPPRESS)
+    parser.add_argument("--required-bytes", type=int, default=0, help=argparse.SUPPRESS)
+    parser.add_argument("--pick-result-file", type=str, default=None, help=argparse.SUPPRESS)
     parser.add_argument(
         "-i",
         "--input",

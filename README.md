@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <h1 align="center">Mortem Primer (Mortem Trimmer)</h1>
+  <h1 align="center">Mortem Trimmer</h1>
   <p align="center">
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-D99A2B.svg" alt="License: MIT" /></a>
     <a href="https://github.com/fadhiilahahmadzikri/mortemtrimmer"><img src="https://img.shields.io/badge/GitHub-fadhiilahahmadzikri%2Fmortemtrimmer-261E18.svg" alt="GitHub Repository" /></a>
@@ -37,9 +37,9 @@
 
 ---
 
-## What is Mortem Primer?
+## What is Mortem Trimmer?
 
-**Mortem Primer** (**Mortem**) is a production-grade Windows desktop and CLI media pipeline that automatically detects and removes silent pauses from audio and video files, optionally cleans background noise, verifies stream integrity with PyAV, and writes non-destructive outputs beside your source files.
+**Mortem Trimmer** (**Mortem**) is a production-grade Windows desktop and CLI media pipeline that automatically detects and removes silent pauses from audio and video files, optionally cleans background noise, verifies stream integrity with PyAV, and writes non-destructive outputs cleanly.
 
 The Windows installer ships **100% self-contained and offline-ready**: FFmpeg, PyTorch CPU, neural VAD models (Silero VAD `v6.2`, Faster-Whisper `tiny`/`base`), DeepFilterNet3 denoiser checkpoints, and Spectral Gating libraries are all bundled inside the executable — zero post-install downloads or internet access required.
 
@@ -67,31 +67,31 @@ The Windows installer ships **100% self-contained and offline-ready**: FFmpeg, P
 
 ### Option A: Interactive Windows Installer (Recommended)
 
-1. Download **`MortemPrimer-Setup-<version>-win-x64.exe`** from [GitHub Releases](https://github.com/fadhiilahahmadzikri/mortemtrimmer/releases).
+1. Download **`MortemTrimmer-Setup-<version>-win-x64.exe`** from [GitHub Releases](https://github.com/fadhiilahahmadzikri/mortemtrimmer/releases).
 2. Double-click the `.exe` installer (no Administrator password required — installs per-user into `%LOCALAPPDATA%\Programs\AutoSilentTrimmer`).
 3. Review the **MIT License** and bundled **Third-Party Notices**, then choose optional tasks:
    - **Register right-click 'Trim This Video' menu in File Explorer** *(enabled by default)*
-   - **Start Mortem Primer background service on sign-in** *(optional)*
+   - **Start Mortem Trimmer background service on sign-in** *(optional)*
 4. After installation completes:
-   - **Trim directly**: Right-click any `.mp4`, `.mkv`, `.mov`, `.webm`, `.wav`, `.mp3`, etc. file in File Explorer -> **Trim This Video**.
-   - **Configure settings**: Open **Settings - Mortem Primer** from Start Menu (or tray menu -> **Settings**).
-   - **Inspect activity/errors**: Open **System Logs - Mortem Primer** from Start Menu (or tray popup -> **View Logs**).
+   - **Trim directly**: Right-click any `.mp4`, `.mkv`, `.mov`, `.webm`, `.wav`, `.mp3`, etc. file in File Explorer -> **Trim This Video**, then pick where to save the output folder in the native Windows prompt.
+   - **Configure settings**: Open **Settings - Mortem Trimmer** from Start Menu (or tray menu -> **Settings**).
+   - **Inspect activity/errors**: Open **System Logs - Mortem Trimmer** from Start Menu (or tray popup -> **View Logs**).
 
 ### Option B: Silent / Automated Installation
 
 ```powershell
 # Silent install with File Explorer context menu enabled:
-.\MortemPrimer-Setup-1.0.0-win-x64.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS=contextmenu
+.\MortemTrimmer-Setup-1.0.0-win-x64.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS=contextmenu
 
 # Silent install into a custom folder without registering shell context menu:
-.\MortemPrimer-Setup-1.0.0-win-x64.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="D:\Apps\MortemPrimer" /TASKS=none
+.\MortemTrimmer-Setup-1.0.0-win-x64.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="D:\Apps\MortemTrimmer" /TASKS=none
 ```
 
 ### What Is Bundled Inside the Installer?
 
 Everything runs locally offline after install (`0` runtime downloads):
 
-- `autosilenttrimmer.exe` & `autosilenttrimmer-cli.exe` (PyInstaller 6 Windows PE executables with `Mortem Primer` icon & VersionInfo metadata)
+- `autosilenttrimmer.exe` & `autosilenttrimmer-cli.exe` (PyInstaller 6 Windows PE executables with `Mortem Trimmer` icon & VersionInfo metadata)
 - `trim-shim.exe` (ultra-fast Explorer IPC shell dispatcher)
 - Managed FFmpeg & PyAV runtime
 - Pre-installed AI stack: CPU `torch` `2.8.0+cpu`, `torchaudio`, `faster-whisper`, `ctranslate2`, `deepfilternet`, `noisereduce`, `scipy`, `onnxruntime`, `matplotlib`, `seaborn`, `PyQt6`
@@ -337,7 +337,7 @@ mortemtrimmer/
 | Issue | Solution |
 |---|---|
 | Setup prompts to close running app on upgrade | Upgrade using latest installer (`PrepareToInstall` stops background tray/shim processes automatically) or run `python scripts/clean_install.py` first |
-| Inspect why a right-click job failed | Click **View Logs** on the progress popup or open **System Logs - Mortem Primer** (`--logs`) — all history in `app.log` is preserved append-only |
+| Inspect why a right-click job failed | Click **View Logs** on the progress popup or open **System Logs - Mortem Trimmer** (`--logs`) — all history in `app.log` is preserved append-only |
 | Override storage / logs directory in portable runs | Set `AUTOSILENTTRIMMER_DATA_DIR=<folder>` before launching |
 | CUDA unavailable warning on CPU-only PC | Expected under `G2 GPU Preferred` — processing automatically uses CPU inference & `libx264` cleanly |
 | Custom FFmpeg binary needed | Configure **Custom FFmpeg Executable** in Settings (`--tune`) or pass `-f / --ffmpeg <path>` |
@@ -350,7 +350,7 @@ Copyright (c) 2026 Fadhiilah Ahmad Zikri. This project is open source and licens
 
 ## Credits
 
-Mortem Primer is an independent project by Fadhiilah Ahmad Zikri built atop external open-source libraries, tools, and pretrained models whose separate copyrights and licenses remain intact (see `THIRD_PARTY_NOTICES.txt` in distributed builds or **Help -> About -> Third-Party Notices**):
+Mortem Trimmer is an independent project by Fadhiilah Ahmad Zikri built atop external open-source libraries, tools, and pretrained models whose separate copyrights and licenses remain intact (see `THIRD_PARTY_NOTICES.txt` in distributed builds or **Help -> About -> Third-Party Notices**):
 
 - [Silero VAD](https://github.com/snakers4/silero-vad) (MIT License)
 - [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) / OpenAI Whisper (MIT License)
@@ -370,7 +370,7 @@ If this tool saved you time, please **star [fadhiilahahmadzikri/mortemtrimmer](h
 </p>
 
 <!-- SEO Tags & Keywords -->
-<!-- mortem primer, mortem trimmer, mortemtrimmer, auto silence remover, remove silence from video,
+<!-- mortem trimmer, mortemtrimmer, auto silence remover, remove silence from video,
      remove silence from audio, silence trimmer, auto cut silence, automatic silence removal,
      offline ai video trimmer, windows silence remover, ffmpeg silence detection, voice activity detection,
      silero vad, whisper vad, deepfilternet3, noise reduction, background noise removal, podcast editor,

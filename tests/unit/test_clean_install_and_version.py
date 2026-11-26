@@ -29,6 +29,11 @@ def test_version_ssot_parity_across_pyproject_constants_and_installer() -> None:
     iss_ver = m.group(1)
 
     assert APP_VERSION == pep_ver == iss_ver
+    assert "UsePreviousTasks=no" in iss_text
+    ctx_line = next((ln for ln in iss_text.splitlines() if 'Name: "contextmenu"' in ln), "")
+    assert ctx_line and "unchecked" not in ctx_line
+    auto_line = next((ln for ln in iss_text.splitlines() if 'Name: "autostart"' in ln), "")
+    assert auto_line and "unchecked" in auto_line
 
 
 def test_clean_installed_app_preserves_logs_by_default_and_purges_when_asked(
