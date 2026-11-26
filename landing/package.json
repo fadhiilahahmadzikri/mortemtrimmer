@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "check": "bun run lint && bun run typecheck && bun run build",
     "cf:whoami": "wrangler whoami",
     "cf:project:create": "wrangler pages project create mortemtrimmer --production-branch=main --force",
