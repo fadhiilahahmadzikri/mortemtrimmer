@@ -31,7 +31,18 @@ export const SITE_CONFIG = {
   name: "Mortem Trimmer",
   wordmark: "MORTEM TRIMMER",
   siteUrl: SITE_URL,
-  logoPath: "/mortem-icon.png",
+  logoPath: "/mortem-logo.png",
+  logoWidth: 1024,
+  logoHeight: 259,
+  iconPath: "/mortem-icon.png",
+  heroBgPath: "/hero-knight-bg.jpg",
+  heroBgWidth: 1672,
+  heroBgHeight: 941,
+  ogImagePath: "/og-image.jpg",
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  ogImageAlt:
+    "Mortem Trimmer — Automate Video Silence Trimming Offline on Windows",
   tagline:
     "Self-Contained Offline AI Silence Remover & Noise Reduction Production Suite for Windows.",
   seoTitle:

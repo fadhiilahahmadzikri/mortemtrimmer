@@ -14,7 +14,8 @@ export function SeoJsonLd() {
         url: SITE_CONFIG.siteUrl,
         downloadUrl: SITE_CONFIG.downloadUrl,
         license: SITE_CONFIG.licenseUrl,
-        image: `${SITE_CONFIG.siteUrl}${SITE_CONFIG.logoPath}`,
+        image: `${SITE_CONFIG.siteUrl}${SITE_CONFIG.ogImagePath}`,
+        screenshot: `${SITE_CONFIG.siteUrl}${SITE_CONFIG.ogImagePath}`,
         author: {
           "@type": "Person",
           name: SITE_CONFIG.authorName,

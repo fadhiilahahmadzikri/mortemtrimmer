@@ -33,19 +33,17 @@ export function SiteHeader() {
       <div className="mx-auto flex h-full w-full max-w-[1480px] items-center justify-between px-4 md:grid md:grid-cols-[1fr_auto_1fr] md:px-6">
         <a
           href="#"
-          className="inline-flex items-center gap-2.5 justify-self-start text-foreground transition-opacity hover:opacity-80"
+          className="inline-flex items-center justify-self-start transition-opacity hover:opacity-85"
         >
           <Image
             src={SITE_CONFIG.logoPath}
-            alt={`${SITE_CONFIG.name} logo`}
-            width={28}
-            height={28}
-            className="size-7 shrink-0 object-contain"
+            alt={SITE_CONFIG.name}
+            width={SITE_CONFIG.logoWidth}
+            height={SITE_CONFIG.logoHeight}
+            className="h-9 w-auto object-contain md:h-11 dark:drop-shadow-[0_1px_10px_rgba(255,130,50,0.22)]"
             priority
           />
-          <span className="text-[13px] font-bold tracking-[0.08em]">
-            {SITE_CONFIG.wordmark}
-          </span>
+          <span className="sr-only">{SITE_CONFIG.name}</span>
         </a>
 
         <nav

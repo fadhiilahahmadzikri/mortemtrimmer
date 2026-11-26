@@ -34,18 +34,18 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: SITE_CONFIG.logoPath,
-        width: 512,
-        height: 512,
-        alt: `${SITE_CONFIG.name} emblem`,
+        url: SITE_CONFIG.ogImagePath,
+        width: SITE_CONFIG.ogImageWidth,
+        height: SITE_CONFIG.ogImageHeight,
+        alt: SITE_CONFIG.ogImageAlt,
       },
     ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: SITE_CONFIG.seoTitle,
     description: SITE_CONFIG.seoDescription,
-    images: [SITE_CONFIG.logoPath],
+    images: [SITE_CONFIG.ogImagePath],
   },
 };
 
