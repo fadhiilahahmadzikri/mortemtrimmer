@@ -47,3 +47,20 @@ packaging/offline_models/
 
 # Release notes (local only)
 RELEASE_NOTES.md
+
+# Environment files (never commit real secrets; keep *.example templates)
+.env
+.env.*
+!.env.example
+
+# Landing page build & local runtime artifacts
+.wrangler/
+landing/node_modules/
+landing/.next/
+landing/out/
+landing/.wrangler/
+landing/*.tsbuildinfo
+landing/next-env.d.ts
+
+# Local website-cloning reference tool (excluded until Phase 2 landing implementation)
+thridparty/
