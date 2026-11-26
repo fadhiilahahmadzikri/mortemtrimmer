@@ -123,6 +123,7 @@ version_scheme = "semver"
 version_provider = "pep621"
 update_changelog_on_bump = true
 annotated_tag = true
+bump_message = "chore(release): bump version $current_version -> $new_version"
 version_files = [
   "pyproject.toml:version",
   "autosilenttrimmer/branding.py:APP_VERSION",

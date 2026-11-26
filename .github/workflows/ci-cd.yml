@@ -4,8 +4,16 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+    paths-ignore:
+      - "landing/**"
+      - ".github/workflows/deploy-landing.yml"
+      - "docs/**"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "landing/**"
+      - ".github/workflows/deploy-landing.yml"
+      - "docs/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -234,6 +242,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: windows-installer
+          path: dist/installer
 
       - name: Verify offline AI inference, silent install, and clean uninstall
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1 -Stage smoke
