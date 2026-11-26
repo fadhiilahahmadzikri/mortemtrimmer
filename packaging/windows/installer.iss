@@ -7,7 +7,7 @@
 #define MyAppURL "https://github.com/fadhiilahahmadzikri/mortemtrimmer"
 #define MyAppSupportURL "https://github.com/fadhiilahahmadzikri/mortemtrimmer/issues"
 #define MyAppCopyright "Copyright (c) 2026 Fadhiilah Ahmad Zikri"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppExeName "autosilenttrimmer.exe"
 #define MyAppShimExeName "trim-shim.exe"
 #define MyAppUserModelID "MortemTrimmer.DesktopApp.1"
